@@ -1,0 +1,5 @@
+---
+- name: Pull newest service image
+  shell:
+    cmd: "docker pull {{docker_pull_image_registry_url}}/vsmart/{{docker_repo_name}}/{{service_name}}:{{service_version}}"
+    chdir: "{{working_dir}}"

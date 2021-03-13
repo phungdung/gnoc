@@ -1,0 +1,15 @@
+---
+- name: Create private key and inventory files for staging environments
+  hosts: local
+  tasks:
+  - name: Ensure private key folder exists
+    file:
+      path: "{{CURRENT_JENKINS_LOCAL_DIR}}/private_key"
+      state: directory
+      mode: 493
+  - name: Create staging inventory file
+    template:
+      src: "{{CURRENT_JENKINS_LOCAL_DIR}}/staging_hosts.ini.j2"
+      dest: "{{CURRENT_JENKINS_LOCAL_DIR}}/staging_hosts.ini"
+      mode: 0644
+

@@ -1,0 +1,3 @@
+SELECT  d.*
+FROM    RISK_TYPE_DETAIL d
+WHERE   1 = 1

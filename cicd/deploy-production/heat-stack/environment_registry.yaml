@@ -1,0 +1,7 @@
+resource_registry:
+  "OS::Vsmart::Service::GatewayBase": services/vsmart_gateway_base.yaml
+  "OS::Vsmart::Service::Base": services/vsmart_base.yaml
+  "OS::Vsmart::Service::Common": services/vsmart_common.yaml
+  "OS::Vsmart::Service::CloudConfig": services/vsmart_cloud_config.yaml
+  "OS::Vsmart::Service::Gateway": services/vsmart_gateway.yaml
+  "OS::Vsmart::Service::Autoscaling": vsmart_service_autoscaling.yaml

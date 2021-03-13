@@ -1,0 +1,22 @@
+SELECT ID childAutoId,
+  SR_PARENT_CODE parentCode,
+  SERVICE_ID serviceId,
+  ROLE_CODE roleCode,
+  SR_CHILD_CODE srCode,
+  CREATE_USER createdUser,
+  SERVICE_GROUP serviceGroup,
+  SERVICE_ARRAY serviceArray,
+  COUNTRY country,
+  TITLE title,
+  DESCRIPTION description,
+  SR_UNIT srUnit
+FROM SR_CHILD_AUTO
+WHERE SR_PARENT_CODE =:srParentCode
+AND NVL(CREATE_SR,0) =0
+AND SR_CHILD_CODE   IS NULL
+AND GENERATE_NO      =
+  (SELECT MIN(GENERATE_NO)
+  FROM SR_CHILD_AUTO
+  WHERE SR_PARENT_CODE   = :srParentCode
+  AND NVL(GENERATE_NO,0) > :generateNo
+  )

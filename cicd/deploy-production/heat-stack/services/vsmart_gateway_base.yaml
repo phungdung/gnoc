@@ -1,0 +1,220 @@
+heat_template_version: queens
+description: A vsmart serivce server base template
+parameters:
+  image:
+    type: string
+    description: Image used for servers
+  flavor:
+    type: string
+    description: flavor used by the servers
+  key_name:
+    type: string
+    description: Name of keypair to assign to servers
+  metadata:
+    type: json
+    description: Nova server service metadata (service_name)
+  network:
+    type: string
+    description: Network used by the server
+  subnet:
+    type: string
+    description: Subnet used by the server
+  security_group:
+    type: string
+    description: security_group which will be apply for this service
+  service_name:
+    type: string
+    description: vsmart service name
+  service_version:
+    type: string
+  service_docker_image_repo:
+    type: string
+    description: >-
+      docker image_repo for service which will run in this server, include service
+      image name and version
+  service_log_volume:
+    type: string
+    description: >-
+      docker volume contains service logs
+  elastic_search_ip:
+    type: string
+    description: elastic search ip
+  jaeger_collector_url:
+    type: string
+    description: jaeger_collector_url wit ip and port
+  working_dir:
+    type: string
+    description: VM working directory
+  cloud_config_uri:
+    type: string
+    description: Cloud config URI Address
+  cloud_config_commit_id:
+    type: string
+    description: Cloud config commit id used for this deploy
+  active_profile:
+    type: string
+    description: Service active profile config
+  service_port:
+    type: number
+    description: Service port
+    default: 0
+  # specific properties for configuration service & gateway service
+  cloud_config_git_uri:
+    type: string
+    description: Service active profile config
+    default: ""
+  cloud_gateway_2nd_network:
+    type: string
+    description: cloud gateway 2nd interface network
+  cloud_gateway_2nd_subnet:
+    type: string
+    description: cloud gateway 2nd interface subnet
+  # specific properties for xmx xms and container memory limit restriction
+  service_container_mem_limit:
+    type: number
+    description: Service container memory limit, unit byte
+  init_heap_size:
+    type: number
+    description: Init heap size value, unit megabyte - Xms flag
+  max_heap_size:
+    type: number
+    description: Max heap size value, unit megabyte - Xmx flag
+  # properties for health check
+  health_check_interval:
+    type: number
+    description: Health check interval
+  health_check_timeout:
+    type: number
+    description: Health check timeout
+  health_check_retry:
+    type: number
+    description: Health check retry
+
+resources:
+  server:
+    type: 'OS::Nova::Server'
+    properties:
+      flavor: { get_param: flavor}
+      image: { get_param: image }
+      metadata: { get_param: metadata }
+      key_name: { get_param: key_name }
+      networks:
+        - port: { get_resource: port_1 }
+        - port: { get_resource: port_2 }
+      tags:
+        - vsmart
+        - { get_param: service_name }
+      user_data_format: SOFTWARE_CONFIG
+      user_data: { get_resource: app_init }
+      user_data_update_policy: IGNORE
+  port_1:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: network }
+      fixed_ips:
+        - subnet_id: { get_param: subnet }
+      security_groups: [{ get_param: security_group }]
+  port_2:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: cloud_gateway_2nd_network }
+      fixed_ips:
+        - subnet_id: { get_param: cloud_gateway_2nd_subnet }
+      security_groups: [{ get_param: security_group }]
+  app_init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+        - config: {get_resource: expose_docker_tcp}
+        - config: {get_resource: config_route_and_inteface}
+        - config: {get_resource: start_support_containers}
+        - config: {get_resource: start_service}
+
+  expose_docker_tcp:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: |
+        #!/bin/bash
+
+        sed -i -e 's/server 0.centos.pool.ntp.org iburst/server 192.168.181.50 iburst/g' /etc/chrony.conf
+        sed -i -e 's/server 1.centos.pool.ntp.org iburst/#/g' /etc/chrony.conf
+        sed -i -e 's/server 2.centos.pool.ntp.org iburst/#/g' /etc/chrony.conf
+        sed -i -e 's/server 3.centos.pool.ntp.org iburst/#/g' /etc/chrony.conf
+
+        sudo systemctl restart chronyd
+
+        sudo rm /etc/docker/daemon.json
+        sudo cat >/etc/docker/daemon.json <<EOF
+        {
+            "insecure-registries": ["10.240.201.50:7891", "10.240.201.50:7890"],
+            "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2376"],
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-file": "20",
+              "max-size": "100m"
+            }
+        }
+        EOF
+        sudo systemctl daemon-reload
+        sudo systemctl restart docker
+
+  config_route_and_inteface:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          template: {get_file: config_2nd_interface_and_route.sh}
+          params:
+            "$ip_addr": { get_attr: [port_2, fixed_ips, 0, ip_address] }
+            "$mac_addr": { get_attr: [port_2, mac_address] }
+
+  start_support_containers:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          template: {get_file: start_support_containers.sh}
+          params:
+            "$working_dir": { get_param: working_dir }
+            "$elastic_search_ip": { get_param: elastic_search_ip }
+            "$jaeger_collector_url": { get_param: jaeger_collector_url }
+            "$service_docker_image_repo": { get_param: service_docker_image_repo }
+
+  start_service:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          template: {get_file: start_service_container.sh}
+          params:
+            "$%working_dir%$": { get_param: working_dir }
+            "$%service_name%$": { get_param: service_name }
+            "$%service_version%$": { get_param: service_version }
+            "$%service_docker_image_repo%$": { get_param: service_docker_image_repo }
+            "$%service_log_volume%$": { get_param: service_log_volume }
+            "$%cloud_config_uri%$": { get_param: cloud_config_uri }
+            "$%cloud_config_commit_id%$": { get_param: cloud_config_commit_id }
+            "$%active_profile%$": { get_param: active_profile }
+            "$%service_port%$": { get_param: service_port }
+            "$%cloud_config_git_uri%$": { get_param: cloud_config_git_uri }
+
+            "$%health_check_interval%$": { get_param: health_check_interval }
+            "$%health_check_timeout%$": { get_param: health_check_timeout }
+            "$%health_check_retry%$": { get_param: health_check_retry }
+
+            "$%init_heap_size%$": { get_param: init_heap_size }
+            "$%max_heap_size%$": { get_param: max_heap_size }
+            "$%service_container_mem_limit%$": { get_param: service_container_mem_limit }
+
+
+outputs:
+  server_ip:
+    description: IP Address of the service server
+    value: { get_attr: [server, first_address] }
+  port_2_ip:
+    description: ip assigned for port 2
+    value: { get_attr: [port_2, fixed_ips, 0, ip_address] }

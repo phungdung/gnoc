@@ -1,0 +1,3 @@
+SELECT  g.*
+FROM    WO_CD_GROUP g
+WHERE   LOWER(g.WO_GROUP_CODE) = :woGroupCode

@@ -1,0 +1,3 @@
+SELECT  h.*
+FROM    WO_HISTORY h
+WHERE   1 = 1

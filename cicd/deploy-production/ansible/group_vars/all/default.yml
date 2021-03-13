@@ -1,0 +1,7 @@
+upgrade_stack: True
+upgrade_service: True
+disable_iptables: False
+enable_iptables: False
+generate_inventory: False
+use_production_utils: False
+use_manual_utils: False

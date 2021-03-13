@@ -1,0 +1,10 @@
+SELECT
+a.CFG_ID cfgId,
+a.CFG_NAME cfgName,
+a.LEVEL_ID levelId,
+a.PRIORITY_ID priorityId,
+a.LOCATION_NAME locationName
+FROM COMMON_GNOC.CFG_SMS_GOING_OVERDUE a
+WHERE
+  1 = 1
+

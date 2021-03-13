@@ -1,0 +1,129 @@
+SELECT T1.SERVICE_ID serviceId ,
+  T1.COUNTRY country ,
+  L.LOCATION_NAME countryName,
+  T1.SERVICE_ARRAY serviceArray ,
+  T1.SERVICE_GROUP serviceGroup ,
+  T1.SERVICE_CODE serviceCode ,
+  CASE
+    WHEN T6.LEE_LOCALE =:p_leeLocale
+    THEN (
+      CASE
+        WHEN T6.LEE_VALUE IS NOT NULL
+        THEN T6.LEE_VALUE
+        ELSE CAST(T1.SERVICE_NAME AS NVARCHAR2(2000))
+      END )
+    ELSE CAST(T1.SERVICE_NAME AS NVARCHAR2(2000))
+  END serviceName ,
+  CASE
+    WHEN tArray.LEE_LOCALE =:p_leeLocale
+    THEN (
+      CASE
+        WHEN tArray.LEE_VALUE IS NOT NULL
+        THEN tArray.LEE_VALUE
+        ELSE CAST(T2.CONFIG_NAME AS NVARCHAR2(2000))
+      END )
+    ELSE CAST(T2.CONFIG_NAME AS NVARCHAR2(2000))
+  END serviceArrayName ,
+  CASE
+    WHEN tGroup.LEE_LOCALE =:p_leeLocale
+    THEN (
+      CASE
+        WHEN tGroup.LEE_VALUE IS NOT NULL
+        THEN tGroup.LEE_VALUE
+        ELSE CAST(T3.CONFIG_NAME AS NVARCHAR2(2000))
+      END )
+    ELSE CAST(T3.CONFIG_NAME AS NVARCHAR2(2000))
+  END serviceGroupName ,
+  T1.EXECUTION_UNIT executionUnit ,
+  unit.unitName executionUnitDesc ,
+  T1.STATUS status ,
+  T1.SERVICE_DESCRIPTION serviceDescription ,
+  DECODE(T1.REPLY_TIME,NULL,'',T1.REPLY_TIME
+  ||' '
+  || :varDate) replyTime,
+  DECODE(T1.EXECUTION_TIME,NULL,'',T1.EXECUTION_TIME
+  ||' '
+  || :varDate) executionTime,
+  T1.ATTACH_FILE attachFile ,
+  T1.CR cr ,
+  T1.WO wo ,
+  T1.IS_INPUT_CHECKING isInputChecking ,
+  T1.IS_OUTPUT_CHECKING isOutputChecking ,
+  T1.APPROVE approve ,
+  T1.ROLE_CODE roleCode ,
+  T1.FLOW_EXECUTE flowExecute ,
+  T4.FLOW_NAME flowExecuteName ,
+  T1.IS_ADD_DAY isAddDay ,
+  T1.RENEW_DAY renewDay ,
+  T1.CR_WO_CREATE_TIME createdTimeCRWO ,
+  T1.AUTO_GENERATION_CYCLES autoGenerationCycles,
+  T1.IS_CR_NODES isCrNodes,
+  T1.MONTH_CYCLE monthCycle,
+  T1.LAST_DATE lastDate,
+  TO_CHAR(T1.LAST_DATE,'dd/MM/yyyy') lastDateStr,
+  T1.START_AUTO_DATE startAutoDate,
+  TO_CHAR(T1.START_AUTO_DATE,'dd/MM/yyyy') startAutoDateStr,
+  T1.COMMENT_AUTO commentAuto,
+  SUBSTR(t7.SERVICE_NAME, 1, LENGTH(t7.SERVICE_NAME)-1) serviceNameChild
+FROM OPEN_PM.SR_CATALOG T1
+INNER JOIN OPEN_PM.SR_CONFIG T2
+ON T1.SERVICE_ARRAY = T2.CONFIG_CODE
+AND T2.CONFIG_GROUP = 'SERVICE_ARRAY'
+INNER JOIN OPEN_PM.SR_CONFIG T3
+ON T1.SERVICE_GROUP = T3.CONFIG_CODE
+AND T3.CONFIG_GROUP = 'SERVICE_GROUP'
+AND T3.PARENT_CODE  = T2.CONFIG_CODE
+LEFT JOIN OPEN_PM.SR_FLOW_EXECUTE T4
+ON T1.FLOW_EXECUTE = T4.FLOW_ID
+LEFT JOIN COMMON_GNOC.UNIT T5
+ON T1.EXECUTION_UNIT = T5.UNIT_ID
+LEFT JOIN COMMON_GNOC.LANGUAGE_EXCHANGE T6
+ON T1.SERVICE_ID         = T6.BUSSINESS_ID
+AND T6.APPLIED_SYSTEM    =2
+AND T6.APPLIED_BUSSINESS = 21
+LEFT JOIN COMMON_GNOC.LANGUAGE_EXCHANGE tArray
+ON T2.CONFIG_ID              = tArray.BUSSINESS_ID
+AND tArray.APPLIED_SYSTEM    =2
+AND tArray.APPLIED_BUSSINESS = 20
+LEFT JOIN COMMON_GNOC.LANGUAGE_EXCHANGE tGroup
+ON T3.CONFIG_ID              = tGroup.BUSSINESS_ID
+AND tGroup.APPLIED_SYSTEM    =2
+AND tGroup.APPLIED_BUSSINESS = 20
+LEFT JOIN COMMON_GNOC.CAT_LOCATION L
+ON T1.COUNTRY = L.LOCATION_ID
+LEFT JOIN
+  (SELECT RTRIM(XMLAGG(XMLELEMENT(E,t8.SERVICE_NAME,', ').EXTRACT('//text()')
+  ORDER BY t8.SERVICE_NAME).GetClobVal()) AS SERVICE_NAME ,
+    t7.service_Id
+  FROM SR_CATALOG_CHILD t7
+  LEFT JOIN SR_CATALOG t8
+  ON t7.SERVICE_ID_CHILD = t8.SERVICE_ID
+  GROUP BY t7.service_Id
+  ) t7 ON t1.service_id = t7.service_id
+LEFT JOIN
+  (SELECT ut.unit_id unitId,
+    ut.parent_unit_id,
+    ut.unit_code unitCode,
+    ut.LOCATION_ID locationId,
+    CASE
+      WHEN ut.unit_code IS NULL
+      THEN ''
+      ELSE TO_CHAR(ut.unit_code
+        || ' ('
+        || ut.unit_name
+        || ')')
+    END AS unitName,
+    CASE
+      WHEN parentUt.unit_code IS NULL
+      THEN ''
+      ELSE TO_CHAR(parentUt.unit_code
+        || ' ('
+        || parentUt.unit_name
+        || ')')
+    END AS parentUnitName
+  FROM common_gnoc.unit ut
+  LEFT JOIN common_gnoc.unit parentUt
+  ON ut.parent_unit_id        = parentUt.unit_id
+  WHERE ut.status             = 1
+  ) unit ON T1.EXECUTION_UNIT = unit.unitId
+WHERE 1                       =1

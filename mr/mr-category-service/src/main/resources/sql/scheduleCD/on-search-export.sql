@@ -1,0 +1,28 @@
+SELECT
+   T1.SCHEDULE_ID scheduleId
+  ,T1.MARKET_CODE marketCode
+  ,T1.DEVICE_TYPE deviceType
+  ,T1.DEVICE_CD_ID deviceCdId
+  ,T1.DEVICE_NAME deviceName
+  ,T1.PROCEDURE_ID procedureId
+  ,TO_CHAR(T1.LAST_DATE, 'dd/MM/yyyy') lastDate
+  ,TO_CHAR(T1.NEXT_DATE, 'dd/MM/yyyy') nextDate
+  ,TO_CHAR(T1.NEXT_DATE_MODIFY, 'dd/MM/yyyy') nextDateModify
+  ,T1.MODIFY_USER modifyUser
+  ,TO_CHAR(T1.MODIFY_DATE, 'dd/MM/yyyy') modifyDate
+  ,TO_CHAR(T1.UPDATED_DATE, 'dd/MM/yyyy') updatedDate
+  ,T1.STATION station
+  ,T1.MR_ID mrId
+  ,T1.WO_ID woCode
+  ,T2.PROCEDURE_NAME procedureName
+  ,T1.CYCLE cycle
+  ,T3.DEVICE_TYPE deviceTypeName
+  ,T1.STATION stationCode
+  ,T4.USER_MR_HARD userMrHard
+  ,cl.LOCATION_NAME marketName
+   FROM OPEN_PM.MR_SCHEDULE_CD T1 LEFT JOIN OPEN_PM.MR_CFG_PROCEDURE_CD T2 ON T1.PROCEDURE_ID = T2.PROCEDURE_ID
+   LEFT JOIN OPEN_PM.MR_DEVICE_TYPE_CD T3 ON T1.DEVICE_TYPE = T3.DEVICE_TYPE and T1.market_code = T3.Market_code
+   LEFT JOIN OPEN_PM.MR_DEVICE_CD T4 ON T1.DEVICE_CD_ID = T4.DEVICE_CD_ID
+   LEFT JOIN OPEN_PM.MR T5 ON T1.MR_ID = T5.MR_ID
+   LEFT JOIN COMMON_GNOC.CAT_LOCATION cl ON (T1.MARKET_CODE  = cl.LOCATION_ID and cl.PARENT_ID is null and cl.status = 1)
+   WHERE 1 = 1

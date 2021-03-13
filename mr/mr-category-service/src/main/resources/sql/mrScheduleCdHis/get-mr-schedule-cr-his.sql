@@ -1,0 +1,29 @@
+SELECT T1.SCHEDULE_CD_HIS_ID scheduleCdHisId ,
+  T1.DEVICE_TYPE deviceType ,
+  T1.DEVICE_CD_ID deviceCdId ,
+  T1.DEVICE_NAME deviceName ,
+  TO_CHAR(T1.MR_DATE, 'dd/MM/yyyy') mrDate ,
+  T1.MR_CONTENT mrContent ,
+  T1.MR_MODE mrMode ,
+  T1.MR_TYPE mrType ,
+  T1.MR_ID mrId ,
+  T1.MR_CODE mrCode ,
+  T1.IMPORTANT_LEVEL importantLevel ,
+  T1.PROCEDURE_ID procedureId ,
+  T1.PROCEDURE_NAME procedureName ,
+  T1.CYCLE cycle ,
+  T1.MARKET_CODE marketCode ,
+  T2.STATION_CODE stationCode ,
+  T2.USER_MR_HARD userMrHard ,
+  T3.WO_CODE woCode,
+  cl.LOCATION_NAME marketName
+FROM OPEN_PM.MR_SCHEDULE_CD_HIS T1
+LEFT JOIN OPEN_PM.MR_DEVICE_CD T2
+ON T1.DEVICE_CD_ID = T2.DEVICE_CD_ID
+LEFT JOIN WFM.WO T3
+ON T1.MR_CODE = T3.WO_SYSTEM_ID
+LEFT JOIN COMMON_GNOC.CAT_LOCATION cl
+ON (T1.MARKET_CODE = cl.LOCATION_ID
+AND cl.PARENT_ID  IS NULL
+AND cl.status      = 1)
+WHERE 1            = 1

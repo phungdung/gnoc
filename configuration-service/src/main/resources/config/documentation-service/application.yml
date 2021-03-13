@@ -1,0 +1,32 @@
+server:
+  port: 9000
+
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    enabled: true
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8061/eureka/
+
+swagger:
+  config:
+    refreshrate: 5000
+logging:
+  file: ./log/documentation-service.log
+  file.max-history: 10
+  file.max-size: 10MB
+  level:
+    ROOT: ERROR
+
+opentracing:
+  jaeger:
+    udp-sender:
+      host: localhost
+      port: 6831
+    log-spans: false
+    probabilistic-sampler:
+      sampling-rate: 0.01

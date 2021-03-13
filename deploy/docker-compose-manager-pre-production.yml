@@ -1,0 +1,7 @@
+version: '3.2'
+
+services:
+  nginx:
+    ports: ['8080:80']
+  kibana:
+    ports: ['9601:5601']

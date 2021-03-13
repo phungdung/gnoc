@@ -1,0 +1,54 @@
+WITH list_language_exchange AS
+  (SELECT LE.LEE_ID,
+    LE.APPLIED_SYSTEM,
+    LE.APPLIED_BUSSINESS,
+    LE.BUSSINESS_ID,
+    LE.BUSSINESS_CODE,
+    LE.LEE_LOCALE,
+    LE.LEE_VALUE
+  FROM COMMON_GNOC.LANGUAGE_EXCHANGE LE
+  JOIN
+    (SELECT *
+    FROM COMMON_GNOC.CAT_ITEM
+    WHERE CATEGORY_ID = 263
+    AND ITEM_CODE     = 'OPEN_PM'
+    ) CAT1
+  ON LE.APPLIED_SYSTEM = CAT1.ITEM_VALUE
+  JOIN
+    (SELECT *
+    FROM COMMON_GNOC.CAT_ITEM
+    WHERE CATEGORY_ID = 262
+    AND ITEM_CODE     = 'OPEN_PM.MR_MATERIAL'
+    ) CAT2
+  ON LE.APPLIED_BUSSINESS = CAT2.ITEM_VALUE
+  WHERE LE.LEE_LOCALE     = :p_leeLocale
+  ),
+  lst_data AS
+  (SELECT MM.MATERIAL_ID MATERIAL_ID ,
+    CASE
+      WHEN llx.LEE_VALUE IS NULL
+      THEN MM.MATERIAL_NAME
+      ELSE TO_CHAR(llx.LEE_VALUE)
+    END MATERIAL_NAME,
+    MM.SERIAL SERIAL ,
+    MM.UNIT_PRICE UNIT_PRICE ,
+    MM.DATE_TIME DATE_TIME ,
+    MM.DEVICE_TYPE DEVICE_TYPE ,
+    MM.MARKET_CODE MARKET_CODE,
+    cl.location_name location_name
+  FROM OPEN_PM.MR_MATERIAL MM
+  LEFT JOIN list_language_exchange llx
+  ON llx.BUSSINESS_ID = MM.MATERIAL_ID
+  LEFT JOIN common_gnoc.cat_location cl
+  ON cl.location_id = MM.MARKET_CODE
+  )
+select
+    MATERIAL_ID materialId ,
+    MATERIAL_NAME materialName,
+    SERIAL serial ,
+    UNIT_PRICE unitPrice ,
+    DATE_TIME DATETIME ,
+    DEVICE_TYPE deviceType ,
+    MARKET_CODE marketCode,
+    location_name materialNameEN
+from lst_data where 1=1

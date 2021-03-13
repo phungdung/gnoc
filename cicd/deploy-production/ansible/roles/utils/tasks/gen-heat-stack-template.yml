@@ -1,0 +1,6 @@
+---
+- name: Create inventory files for production environments
+  template:
+    src: "gnoc_heat_template.yaml.j2"
+    dest: "{{CURRENT_JENKINS_LOCAL_DIR}}/gnoc_heat_template.yaml"
+    mode: 0644

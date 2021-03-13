@@ -1,0 +1,8 @@
+SELECT
+t1.ID id,
+t1.ASSIGN_USER_ID assignUserId,
+t1.ASSIGN_USER_NAME assignUserName,
+t1.RECEIVE_USER_ID receiveUserId,
+t1.RECEIVE_USER_NAME receiveUserName,
+t1.SHIFT_HANDOVER_ID shiftHandoverId
+FROM COMMON_GNOC.SHIFT_STAFT t1

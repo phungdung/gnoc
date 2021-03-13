@@ -1,0 +1,48 @@
+---
+# Configuration service upgrade phase
+- name: Upgrade configuration service
+  hosts: configuration-service
+  gather_facts: false
+  serial: 1
+  roles:
+    - { role: service,
+        service_action: upgrade,
+        tags: upgrade-configuration-service,
+        when: upgrade_service | bool }
+
+# Discovery service upgrade phase
+- name: Upgrade discovery service
+  hosts: discovery-service
+  gather_facts: false
+  serial: 1
+  roles:
+    - { role: service,
+        service_action: upgrade,
+        tags: upgrade-discovery-service,
+        when: upgrade_service | bool }
+
+{% for service_name in SERVICE_LIST %}
+{% if service_name != 'discovery-service' and service_name != 'gateway-service'  and service_name != 'configuration-service'%}
+# Vsmart {{ service_name }} upgrade phase
+- name: Upgrade {{service_name}}
+  hosts: {{service_name}}
+  gather_facts: false
+  serial: 1
+  roles:
+    - { role: service,
+        service_action: upgrade,
+        tags: upgrade-{{service_name}},
+        when: upgrade_service | bool }
+{% endif %}
+{% endfor %}
+
+# Gateway service upgrade phase
+- name: Upgrade gateway-service
+  hosts: gateway-service
+  gather_facts: false
+  serial: 1
+  roles:
+    - { role: service,
+        service_action: upgrade,
+        tags: upgrade-gateway-service,
+        when: upgrade_service | bool }

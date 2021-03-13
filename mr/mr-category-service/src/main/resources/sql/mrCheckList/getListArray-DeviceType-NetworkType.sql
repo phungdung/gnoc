@@ -1,0 +1,17 @@
+SELECT DISTINCT *
+FROM
+  (SELECT Cat1.Item_Name as arrayCode,
+    Dev1.Network_Type  as networkType,
+    Dev1.DEVICE_TYPE as deviceType
+  FROM COMMON_GNOC.CAT_ITEM cat1
+  LEFT JOIN MR_DEVICE dev1
+  ON (cat1.Item_Value    = dev1.ARRAY_CODE
+  AND dev1.NETWORK_TYPE IS NOT NULL)
+  WHERE cat1.STATUS      = 1
+  AND cat1.CATEGORY_ID   =
+    (SELECT CATEGORY_ID
+    FROM COMMON_GNOC.CATEGORY
+    WHERE CATEGORY_CODE='MR_SUBCATEGORY'
+    )
+  )
+WHERE 1=1

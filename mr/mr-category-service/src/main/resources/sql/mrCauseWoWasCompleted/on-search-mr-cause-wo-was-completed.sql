@@ -1,0 +1,38 @@
+WITH lang_exchange AS
+  (SELECT ci.ITEM_ID,
+    ci.ITEM_NAME,
+    CASE
+      WHEN le.LEE_VALUE IS NULL
+      THEN ci.ITEM_NAME
+      ELSE le.LEE_VALUE
+    END ITEM_CODE
+  FROM COMMON_GNOC.CAT_ITEM ci
+  LEFT JOIN COMMON_GNOC.LANGUAGE_EXCHANGE le
+  ON ci.ITEM_ID            = le.BUSSINESS_ID
+  AND le.APPLIED_SYSTEM    = :system
+  AND le.APPLIED_BUSSINESS = :business
+  AND le.LEE_LOCALE        = :leeLocale
+  WHERE ci.STATUS          = 1
+  AND ci.CATEGORY_ID       =
+    (SELECT CATEGORY_ID
+    FROM COMMON_GNOC.CATEGORY
+    WHERE CATEGORY_CODE = :categoryCode
+    )
+  )
+SELECT T1.ID id,
+  T1.REASON_CODE reasonCode,
+  T1.REASON_NAME reasonName,
+  T1.REASON_TYPE reasonType,
+  CASE
+    WHEN le.ITEM_CODE IS NOT NULL
+    THEN TO_CHAR(le.ITEM_CODE)
+    ELSE TO_CHAR(T1.REASON_TYPE)
+  END reasonTypeName,
+  T1.WAITING_TIME waitingTime,
+  T1.UPDATED_USER updatedUser,
+  T1.UPDATED_TIME updatedTime,
+  T1.VALIDATE_PROCESS validateProcess
+FROM OPEN_PM.CAUSE_WO_WAS_COMPLETED T1
+LEFT JOIN lang_exchange le
+ON T1.REASON_TYPE = TO_CHAR(le.ITEM_ID)
+WHERE 1           =1

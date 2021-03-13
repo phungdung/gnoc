@@ -1,0 +1,9 @@
+---
+- name: Create or update Heat stack
+  hosts: local
+  gather_facts: false
+  roles:
+    - { role: heat-stack,
+        heat_stack_action: create-or-update,
+        tags: ["create-or-update-stack"],
+        when: upgrade_stack | bool }

@@ -1,0 +1,5 @@
+SELECT    w.*
+FROM      WO w
+WHERE     (LOWER(w.WO_CODE) = :code OR LOWER(w.WO_SYSTEM_ID) = :code)
+AND       w.CREATE_DATE > SYSDATE - 60
+ORDER BY  w.WO_ID DESC

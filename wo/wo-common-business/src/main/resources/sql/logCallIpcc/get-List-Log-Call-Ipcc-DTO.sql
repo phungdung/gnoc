@@ -1,0 +1,3 @@
+SELECT  c.*
+FROM    LOG_CALL_IPCC c
+WHERE   c.WO_ID = :woId

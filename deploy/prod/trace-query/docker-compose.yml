@@ -1,0 +1,59 @@
+version: '2.4'
+
+networks:
+  monitor:
+
+services:
+  jaeger-query:
+    image: ${IMAGE_REGISTRY_URL}/jaegertracing/jaeger-query:latest
+    container_name: gnoc-jaeger-query
+    ports: ['16686:16686', '16687:16687']
+    volumes:
+      - ./query/ui.json:/tmp/ui.json
+    command: ["--es.server-urls=http://10.240.201.100:9200", "--span-storage.type=elasticsearch", "--query.ui-config=/tmp/ui.json"]
+    environment:
+      - SPAN_STORAGE_TYPE=elasticsearch
+    networks: [monitor]
+    restart: always
+
+  node-exporter:
+    image: ${IMAGE_REGISTRY_URL}/prom/node-exporter:latest
+    container_name: gnoc-node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command: >
+      --path.procfs=/host/proc
+      --path.sysfs=/host/sys
+      --collector.filesystem.ignored-mount-points
+      ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+    ports: ['9100:9100']
+    mem_limit: 268435456  # 256MB
+    networks: [monitor]
+    restart: always
+
+  cadvisor:
+    image: ${IMAGE_REGISTRY_URL}/google/cadvisor:latest
+    container_name: gnoc-cadvisor
+    volumes:
+      - /:/rootfs:rshared
+      - /var/run:/var/run:rshared
+      - /sys:/sys:rshared
+      - /var/lib/docker/:/var/lib/docker:rshared
+      - /cgroup:/cgroup:rshared
+    ports: ['8002:8080']
+    mem_limit: 268435456  # 256MB
+    networks: [monitor]
+    restart: always
+
+  blackbox-exporter:
+    image: ${IMAGE_REGISTRY_URL}/prom/blackbox-exporter:latest
+    container_name: gnoc-blackbox-exporter
+    ports: ['9115:9115']
+    mem_limit: 268435456  # 256MB
+    command: --config.file=/config/blackbox.yml
+    volumes:
+      - ./blackbox/:/config
+    networks: [monitor]
+    restart: always

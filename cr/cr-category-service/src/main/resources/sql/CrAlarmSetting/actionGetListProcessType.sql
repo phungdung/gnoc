@@ -1,0 +1,11 @@
+SELECT cps.CR_PROCESS_ID crProcessId,
+  cps.CR_PROCESS_NAME crProcessName,
+  cps.IMPACT_TYPE impactType
+FROM OPEN_PM.CR_PROCESS cps
+WHERE IS_ACTIVE = 1
+AND NOT EXISTS
+  (SELECT 1
+  FROM OPEN_PM.CR_PROCESS
+  WHERE is_active = 1
+  AND parent_id   = cps.CR_PROCESS_ID
+  )

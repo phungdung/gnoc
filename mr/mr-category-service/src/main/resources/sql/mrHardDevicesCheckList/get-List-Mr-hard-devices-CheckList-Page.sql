@@ -1,0 +1,50 @@
+WITH list_language_exchange AS
+  (SELECT cat.ITEM_VALUE,
+    cat.ITEM_NAME,
+    cat.ITEM_CODE,
+    LE.BUSSINESS_ID,
+    LE.LEE_VALUE,
+    LE.LEE_LOCALE
+  FROM
+    (SELECT *
+    FROM COMMON_GNOC.CAT_ITEM
+    WHERE CATEGORY_ID =
+      (SELECT CATEGORY_ID
+      FROM COMMON_GNOC.CATEGORY
+      WHERE CATEGORY_CODE= 'MR_SUBCATEGORY'
+      AND EDITABLE       = 1
+      )
+    ) cat
+  LEFT JOIN COMMON_GNOC.LANGUAGE_EXCHANGE LE
+  ON LE.BUSSINESS_ID       = cat.ITEM_ID
+  AND LE.APPLIED_SYSTEM    = 1
+  AND LE.APPLIED_BUSSINESS = 3
+  AND LE.LEE_LOCALE        = :p_leeLocale
+  )
+SELECT T1.MR_HARD_DEVICES_CHECKLIST_ID mrHardDevicesCheckListId ,
+  T1.MARKET_CODE marketCode ,
+  T1.ARRAY_CODE arrayCode ,
+  CASE
+    WHEN llex.LEE_VALUE IS NULL
+    THEN llex.ITEM_NAME
+    ELSE llex.LEE_VALUE
+  END arrayCodeSTR,
+  T1.NETWORK_TYPE networkType ,
+  T1.DEVICE_TYPE deviceType ,
+  T1.DEVICE_TYPE_ALL deviceTypeAll ,
+  T1.CONTENT content ,
+  T1.CREATED_USER createdUser ,
+  T1.CREATED_TIME createdTime ,
+  T1.UPDATED_USER updatedUser ,
+  T1.UPDATED_TIME updatedTime ,
+  T1.CYCLE cycle ,
+  T1.TARGET target,
+  cl.location_name marketName
+FROM MR_HARD_DEVICES_CHECKLIST T1
+LEFT JOIN COMMON_GNOC.CAT_LOCATION cl
+ON (T1.MARKET_CODE = cl.LOCATION_ID
+AND cl.PARENT_ID  IS NULL
+AND cl.status      = 1)
+LEFT JOIN list_language_exchange llex
+ON T1.ARRAY_CODE = llex.ITEM_CODE
+WHERE 1          =1

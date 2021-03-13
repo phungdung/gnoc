@@ -1,0 +1,53 @@
+---
+
+#- name: Deploy service in production
+#  hosts: configuration-service
+#  tasks:
+#    - name: Pull image and run
+#      shell:
+#        cmd: docker pull 10.240.201.50:7890/gnoc/production/configuration-service:1.3.3
+#
+#    - name: Create docker compose file for service
+#      copy:
+#        mode: 0755
+#        src: "docker-compose-services-stack.yml"
+#        dest: "/home/centos/"
+#
+#    - name: Start service containers
+#      shell:
+#        cmd: "docker-compose --verbose --log-level DEBUG -p gnoc -f docker-compose-services-stack.yml up -d --timeout 200"
+#        chdir: "/home/centos/"
+#
+#    - name: wait for service port up
+#      wait_for:
+#        host: "127.0.0.1"
+#        port: "8082"
+#        timeout: 360
+
+- name: Deploy service in production
+  hosts: "{{SERVICE_NAME}}"
+  tasks:
+    - name: Pull image and run
+      shell:
+        cmd: "sudo docker pull {{DOCKER_PULL_IMAGE_SERVICE}}"
+
+    - name: Create docker compose file for service
+      template:
+        mode: 0755
+        src: docker-compose-deploy-service.ini.j2
+        dest: "{{SERVER_WORKING_DIR}}/{{SERVICE_NAME}}.yml"
+
+    - name: Check {{SERVICE_NAME}}.yml file
+      shell:
+        cmd: "cat {{SERVICE_NAME}}.yml"
+
+    - name: Start service container
+      shell:
+        cmd: "sudo docker-compose --verbose -p gnoc -f {{SERVICE_NAME}}.yml up -d"
+        chdir: "{{SERVER_WORKING_DIR}}"
+
+    - name: wait for service port up
+      wait_for:
+        host: "127.0.0.1"
+        port: "{{SERVICE_PORT}}"
+        timeout: "{{TIMEOUT_SERVICE_PORT_UP}}"

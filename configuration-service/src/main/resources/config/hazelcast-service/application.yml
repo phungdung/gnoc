@@ -1,0 +1,53 @@
+server:
+  port: 9099
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8061/eureka/
+spring:
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: 6e72e4ffd4a7e4f5e9462d08111766b5022d42517c868ded6fcb73ddd82f2b8242f2fabd241a7e81e59e20cf4e83e5c3
+    username: a7b52025632ede67916405ce4d927957
+    password: c4114bd15ac9b53fb6f306719b98cfc2
+    hikari:
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      maximum-pool-size: 40
+      minimum-idle: 5
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.Oracle10gDialect
+        show_sql: true
+logging:
+  file: ./log/hazelcast-service.log
+  file.max-history: 10
+  file.max-size: 10MB
+  level:
+    ROOT: info
+
+opentracing:
+  jaeger:
+    udp-sender:
+      host: localhost
+      port: 6831
+    log-spans: false
+    probabilistic-sampler:
+      sampling-rate: 0.01
+application:
+  hazelcast:
+    mancenter: http://10.240.202.123:8080/hazelcast-mancenter
+    serverName: DEV1
+    instanceName: SERVER_NODE1_INSTANCE
+    timeToLiveSeconds: 2000
+    updateInterval: 3
+    mapName: GNOC_CACHE_MAP
+    portNumber: 9000
+    portCount: 20
+    cacheSize: 1000
+    members: localhost

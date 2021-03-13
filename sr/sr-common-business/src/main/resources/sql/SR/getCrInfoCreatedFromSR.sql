@@ -1,0 +1,18 @@
+SELECT t1.sr_id srId,
+  t3.cr_number crNumber,
+  t3.STATE state,
+  t4.RETURN_CODE returnCode,
+  t4.ACTION_CODE actionCode,
+  t2.STEP_ID stepId
+FROM OPEN_PM.SR t1
+INNER JOIN OPEN_PM.CR_CREATED_FROM_OTHER_SYS t2
+ON t2.SYSTEM_ID  = 5
+AND t2.OBJECT_ID = t1.SR_ID
+AND t2.IS_ACTIVE = 1
+INNER JOIN OPEN_PM.CR t3
+ON t2.CR_ID = t3.CR_ID
+LEFT JOIN CR_HIS t4
+ON t3.CR_ID    = t4.CR_ID
+AND t3.STATE   = t4.STATUS
+WHERE t1.sr_id = :srId
+ORDER BY t1.sr_id

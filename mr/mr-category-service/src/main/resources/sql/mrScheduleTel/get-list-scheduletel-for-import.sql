@@ -1,0 +1,32 @@
+SELECT
+       SCHEDULE_ID scheduleId,
+       MARKET_CODE marketCode,
+       ARRAY_CODE arrayCode,
+       DEVICE_TYPE deviceType,
+       DEVICE_ID deviceId,
+       DEVICE_CODE deviceCode,
+       DEVICE_NAME deviceName,
+       PROCEDURE_ID procedureId,
+       LAST_DATE lastDate,
+       NEXT_DATE nextDate,
+       NEXT_DATE_MODIFY nextDateModify,
+       MODIFY_USER modifyUser,
+       MODIFY_DATE modifyDate,
+       UPDATED_DATE updatedDate,
+       MR_ID mrId,
+       MR_SOFT mrSoft,
+       MR_HARD mrHard,
+       MR_12M mr12m,
+       STATION STATION,
+       REGION REGION,
+       MR_HARD_CYCLE mrHardCycle,
+       GROUP_CODE groupCode,
+       MR_CONFIRM mrConfirm,
+       MR_COMMENT mrComment,
+       NETWORK_TYPE networkType,
+       CR_ID crId,
+       MR_HARD_CYCLE cycle,
+       WO_ID woId
+FROM
+     MR_SCHEDULE_TEL WHERE 1=1
+     AND SCHEDULE_ID IN (:scheduleIds)

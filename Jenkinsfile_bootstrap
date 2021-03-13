@@ -1,0 +1,451 @@
+import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
+
+jenkinsfile_CD = load 'Jenkinsfile_CD'
+
+@SuppressWarnings("GroovyAssignabilityCheck")
+def checkoutAndMerge() {
+    //noinspection GroovyAssignabilityCheck
+    checkout changelog: true, poll: true, scm: [
+            $class                           : 'GitSCM',
+            branches                         : [[name: "origin/${env.gitlabSourceBranch}"]],
+            doGenerateSubmoduleConfigurations: false,
+            extensions                       : [[$class : 'PreBuildMerge',
+                                                 options: [
+                                                         fastForwardMode: "${env.GitSCM_fastForwardMode}",
+                                                         mergeRemote    : 'origin',
+                                                         mergeStrategy  : 'RESOLVE',
+                                                         mergeTarget    : "${env.gitlabTargetBranch}"
+                                                 ]],
+                                                [$class: 'UserIdentity', email: "${env.GitSCM_UserIdentity_Email}", name: "${env.GitSCM_UserIdentity_Name}"]],
+            submoduleCfg                     : [],
+            userRemoteConfigs                : [[credentialsId: "${env.GitSCM_CredentialsId}",
+                                                 name         : 'origin',
+                                                 url          : "${env.gitlabSourceRepoHomepage}"]]
+    ]
+}
+
+def checkout() {
+    //noinspection GroovyAssignabilityCheck
+    checkout changelog: true, poll: true, scm: [
+            $class                           : 'GitSCM',
+            branches                         : [[name: "${env.gitlabAfter}"]],
+            doGenerateSubmoduleConfigurations: false,
+            extensions                       : [[$class: 'UserIdentity', email: "${env.GitSCM_UserIdentity_Email}", name: "${env.GitSCM_UserIdentity_Name}"]],
+            submoduleCfg                     : [],
+            userRemoteConfigs                : [[credentialsId: "${env.GitSCM_CredentialsId}",
+                                                 name         : 'origin',
+                                                 url          : "${env.gitlabSourceRepoHomepage}"]]
+    ]
+}
+
+@SuppressWarnings("GrMethodMayBeStatic")
+@NonCPS
+def jsonParse(def jsonString) {
+    new groovy.json.JsonSlurperClassic().parseText(jsonString)
+}
+
+// Check if this push commit is in source branch of an Open Merge Request
+def pushCommitInOpenMR(pushBranch) {
+    withCredentials([string(credentialsId: "${env.GITLAB_TOKEN_CREDENTIALS}", variable: 'gitlab_api_token')]) {
+        def response = httpRequest([
+                acceptType   : 'APPLICATION_JSON',
+                httpMode     : 'GET',
+                contentType  : 'APPLICATION_JSON',
+                customHeaders: [[name: 'Private-Token', value: gitlab_api_token]],
+                url          : "${env.GITLAB_PROJECT_API_URL}/merge_requests?state=opened&source_branch=${pushBranch}"
+        ])
+
+        def openMRList = jsonParse(response.content)
+        return openMRList.size() > 0
+    }
+}
+
+@SuppressWarnings("GroovyAssignabilityCheck")
+def checkIfBuildIsRunning(buildURL) {
+    withCredentials([string(credentialsId: "${env.JENKINS_TOKEN_CREDENTIALS}", variable: 'jenkins_api_token')]) {
+        def buildInfoResp = httpRequest([
+                acceptType   : 'APPLICATION_JSON',
+                httpMode     : 'GET',
+                contentType  : 'APPLICATION_JSON',
+                customHeaders: [[name: 'Authorization', value: jenkins_api_token]],
+                url          : "${buildURL}/api/json"
+        ])
+        return jsonParse(buildInfoResp.content)["building"] == true
+    }
+}
+
+@SuppressWarnings("GroovyAssignabilityCheck")
+/**
+ * Check if other builds is running in commit which this build refer to
+ * And close these builds when match below requirements:
+ * Accept and Close MR build only stop OPEN MR build, not stop Push commit build
+ * Open MR Build close both other Open MR build and Push commit build
+ * @param buildType type of current build
+ * @param gitlabMergeRequestIid GitLab merge request id of this build
+ * @return nothing
+ */
+def cancelOldMrBuild(gitlabMergeRequestIid, currentBuildType) {
+    withCredentials([
+            string(credentialsId: "${env.GITLAB_TOKEN_CREDENTIALS}", variable: 'gitlab_api_token'),
+            string(credentialsId: "${env.JENKINS_TOKEN_CREDENTIALS}", variable: 'jenkins_api_token')
+    ]) {
+        def pipelines = httpRequest([
+                acceptType   : 'APPLICATION_JSON',
+                httpMode     : 'GET',
+                contentType  : 'APPLICATION_JSON',
+                customHeaders: [[name: 'Private-Token', value: gitlab_api_token]],
+                url          : "${env.GITLAB_PROJECT_API_URL}/merge_requests/${gitlabMergeRequestIid}/pipelines"
+        ])
+
+        for (pipeline in jsonParse(pipelines.content)) {
+            //noinspection GroovyAssignabilityCheck
+            def checkCommitID = pipeline['sha']
+            echo "check commit id: ${checkCommitID}"
+            def commitJobs = httpRequest([
+                    acceptType   : 'APPLICATION_JSON',
+                    httpMode     : 'GET',
+                    contentType  : 'APPLICATION_JSON',
+                    customHeaders: [[name: 'Private-Token', value: gitlab_api_token]],
+                    url          : "${env.GITLAB_PROJECT_API_URL}/repository/commits/${checkCommitID}/statuses?all=yes"
+            ])
+
+            for (commitJob in jsonParse(commitJobs.content)) {
+                //noinspection GroovyAssignabilityCheck
+                if (currentBuildType == "merge_request_build"
+                        || ((currentBuildType == "accept_mr_build" || currentBuildType == "close_mr_build")
+                        && (commitJob["name"].contains(env.MR_BUILD_PREFIX)
+                        || commitJob["name"].contains(env.ACCEPT_CLOSE_MR_BUILD_PREFIX)))
+                ) {
+                    if (commitJob["status"] == "pending" || commitJob["status"] == "running") {
+                        def buildURL = commitJob["target_url"].substring(
+                                0, commitJob["target_url"].length() - 17)
+                        echo "Check buildURL: ${buildURL}"
+                        echo "Current buildURL: ${env.BUILD_URL}"
+                        if (!env.BUILD_URL.contains(buildURL)) {
+                            def retry = 0
+                            while (checkIfBuildIsRunning(buildURL) && retry < 3) {
+                                echo "Old build: ${commitJob["target_url"]} is running!. Stop this job!"
+                                httpRequest([
+                                        acceptType   : 'APPLICATION_JSON',
+                                        httpMode     : 'POST',
+                                        contentType  : 'APPLICATION_JSON',
+                                        customHeaders: [[name: 'Authorization', value: jenkins_api_token]],
+                                        url          : "${buildURL}/stop"
+                                ])
+                                sleep 10
+                                retry += 1
+                            }
+                            if (checkIfBuildIsRunning(buildURL)) {
+                                error "Build is still Running, cancel build Failed"
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+        echo "pipelines: ${pipelines}"
+    }
+}
+
+def loadConfigFile(){
+    jenkinsfile_script.loadConfigFile()
+}
+
+def checkBuildType() {
+    echo "start check build type"
+    def buildType = "none"
+    if ("${env.gitlabActionType}".toString() == "PUSH") {
+        buildType = "push_build"
+//        buildType = "deploy_production"
+    } else if ("${env.gitlabActionType}".toString() == "MERGE") {
+        if ("${env.gitlabMergeRequestState}".toString() == "opened") {
+            buildType = "merge_request_build"
+        } else if ("${env.gitlabMergeRequestState}".toString() == "closed") {
+            buildType = "close_mr_build"
+        } else if ("${env.gitlabMergeRequestState}".toString() == "merged") {
+            buildType = "accept_mr_build"
+        }else{
+            buildType = "merge_request_build"
+        }
+    } else if ("${env.gitlabActionType}".toString() == "NOTE") {
+        buildType = "merge_request_build"
+    } else if ("${env.gitlabActionType}".toString() == "TAG_PUSH") {
+        buildType = "deploy_production"
+    }
+    echo "build type is ${buildType}"
+    return buildType
+}
+
+def bootstrap_build() {
+    env.BUILD_TYPE = checkBuildType()
+    if (env.BUILD_TYPE != "deploy_production") {
+        echo "Start CI build"
+        bootstrap_CI_build(env.BUILD_TYPE)
+    } else {
+        echo "Start CD build"
+        bootstrap_CD_build()
+    }
+}
+
+def bootstrap_CI_build(buildType) {
+    try {
+        env.STAGING_IP = ""
+        env.MERGE_REQUEST_BUILD_COMMENT = ""
+        env.PUSH_COMMIT_BUILD_COMMENT = ""
+        if (buildType == "push_build") {
+            loadConfigFile()
+            env.gitlabBuildID = env.PUSH_BUILD_PREFIX + "-" + env.BUILD_NUMBER
+            if (pushCommitInOpenMR(env.gitlabBranch)) {
+                stage("Cancel Push commit build") {
+                    echo "Push branch is in an Open Merge Request. Cancel build"
+                    currentBuild.result = "ABORTED"
+                }
+            } else {
+                updateGitlabCommitStatus name: "build", state: 'running'
+                updateGitlabCommitStatus name: "${env.gitlabBuildID}", state: 'running'
+
+                stage('Checkout And Build Source Code') {
+                    checkout()
+                }
+                jenkinsfile_script.buildPushCommit()
+            }
+        } else if (buildType == "merge_request_build") {
+            loadConfigFile()
+            env.gitlabBuildID = env.MR_BUILD_PREFIX + "-" + env.BUILD_NUMBER
+            updateGitlabCommitStatus name: "build", state: 'running'
+            updateGitlabCommitStatus name: "${env.gitlabBuildID}", state: 'running'
+
+            stage('Cancel old MR Build') {
+                cancelOldMrBuild(env.gitlabMergeRequestIid, buildType)
+            }
+
+            updateGitlabCommitStatus name: "build", state: 'running'
+
+            stage('Prepare Source code') {
+                checkoutAndMerge()
+            }
+            jenkinsfile_script.buildMergeRequest()
+            if (currentBuild.result == null) {
+                currentBuild.result = "SUCCESS"
+            }
+        } else if (buildType == "accept_mr_build"
+                || buildType == "close_mr_build") {
+            loadConfigFile()
+            env.gitlabBuildID = env.ACCEPT_CLOSE_MR_BUILD_PREFIX + "-" + env.BUILD_NUMBER
+            updateGitlabCommitStatus name: "${env.gitlabBuildID}", state: 'running'
+            stage('Cancel old MR Build') {
+                cancelOldMrBuild(env.gitlabMergeRequestIid, buildType)
+            }
+            jenkinsfile_script.buildAcceptCloseMR()
+        }
+    } catch (FlowInterruptedException interruptEx) {
+        echo "Build canceled: ${interruptEx}"
+        currentBuild.result = "ABORTED"
+    } catch (InterruptedException interruptEx) {
+        echo "Build canceled: ${interruptEx}"
+        currentBuild.result = "ABORTED"
+    } catch (err) {
+        echo "build error: ${err}"
+        echo "build result: ${currentBuild.result}"
+        if (currentBuild.result != "ABORTED") {
+            currentBuild.result = "FAILURE"
+        }
+        throw err
+    } finally {
+        stage ("Clean Build Environment") {
+            sh 'rm -rf *'
+            sh 'rm -rf .git'
+        }
+        // mark that build is done
+        updateGitlabCommitStatus name: "${env.gitlabBuildID}", state: 'success'
+
+        if (currentBuild.result != "SUCCESS" && currentBuild.result != "ABORTED" && currentBuild.result != "FAILURE") {
+            currentBuild.result = "FAILURE"
+        }
+
+        if (buildType == "push_build" || buildType == "merge_request_build") {
+            if (currentBuild.result == "SUCCESS") {
+                updateGitlabCommitStatus name: "build", state: 'success'
+            } else if (currentBuild.result == "FAILURE") {
+                updateGitlabCommitStatus name: "build", state: 'failed'
+            } else if (currentBuild.result == "ABORTED" && buildType != "push_build") {
+                updateGitlabCommitStatus name: "build", state: 'canceled'
+            }
+        }
+
+        def buildIcon = ""
+        def buildResultStr = ""
+        def lastCommitShortName = env.gitlabMergeRequestLastCommit.substring(0, 8)
+        def display_build_name = "${env.gitlabSourceBranch}:${lastCommitShortName} -> ${env.gitlabTargetBranch} - ${env.gitlabActionType}".toString()
+
+        if (buildType == "push_build") {
+
+            if (currentBuild.result == "SUCCESS") {
+                buildIcon = ":white_check_mark:"
+                buildResultStr = "Build Success."
+            } else if (currentBuild.result == "FAILURE") {
+                buildIcon = ":x:"
+                buildResultStr = "Build Fail."
+            }
+
+            if (currentBuild.result == "FAILURE" || currentBuild.result == "SUCCESS") {
+                def buildSummary = "<summary>$buildIcon Push Commit <strong>${env.gitlabSourceBranch}:${lastCommitShortName}</strong>: " +
+                        "${buildResultStr}</summary>"
+                env.PUSH_COMMIT_BUILD_COMMENT +=
+                        "<h4><i><a href='${env.BUILD_URL}display/redirect'>" +
+                                "Build Details...</a></i></h4><br/><br/>"
+                def buildCommitStr = "<details> ${buildSummary}<br/><br/>${env.PUSH_COMMIT_BUILD_COMMENT}</details>".toString()
+                def requestBody = '{"note":"' + buildCommitStr + '", "line_type": "new"}'
+                withCredentials([string(credentialsId: "${env.GITLAB_API_TOKEN_FOR_COMMENT}", variable: 'gitlab_api_token')]) {
+                    sh "curl -X POST ${env.GITLAB_PROJECT_API_URL}/repository/commits/${env.gitlabAfter}/comments " +
+                            "-H 'Cache-Control: no-cache' -H 'Content-Type: application/json' " +
+                            "-H 'PRIVATE-TOKEN: ${gitlab_api_token}' " +
+                            "-d '${requestBody}' "
+                }
+            }
+        } else if (buildType == "merge_request_build") {
+            def buildResult = 'success'
+            echo "currentBuild.result"
+            echo "${currentBuild.result}"
+            if (currentBuild.result == "SUCCESS") {
+                buildResult = 'success'
+                buildResultStr += " Staging Environment IP: <b><a href='http://${env.STAGING_IP}'>${env.STAGING_IP}</a></b>"
+            } else if (currentBuild.result == "ABORTED") {
+                buildResult = 'canceled'
+                buildIcon = ":warning:"
+                buildResultStr = "Build Canceled."
+            } else if (currentBuild.result == "FAILURE") {
+                buildResult = 'failed'
+                buildIcon = ":x:"
+                buildResultStr = "Build Fail."
+            }
+
+            def buildSummary = "<summary>$buildIcon Merge request <strong>${display_build_name}</strong>: " +
+                    "${buildResultStr}</summary>"
+            env.MERGE_REQUEST_BUILD_COMMENT += "<h4><i><a href='${env.BUILD_URL}display/redirect'>" +
+                    "Build Details...</a></i></h4><br/><br/>"
+            def mergeRequestBuildStr = "<details> ${buildSummary}<br/><br/>${env.MERGE_REQUEST_BUILD_COMMENT}</details>".toString()
+            echo "comment ${mergeRequestBuildStr}"
+            addGitLabMRComment comment: "${mergeRequestBuildStr}"
+            echo "comment added !"
+            if (buildResult == 'failed') {
+                // TODO(conghm1) Rollback when build failed
+//                jenkinsfile_script.rollBackMRBuildFailed(build_workspace_path)
+            }
+        }
+    }
+}
+
+def bootstrap_CD_build(){
+    env.DEPLOY_RESULT_DESCRIPTION = ""
+    try {
+        loadConfigFile()
+        echo "Jenkins_CD: ${jenkinsfile_CD}"
+        jenkinsfile_CD.deployToProduction()
+    } catch (FlowInterruptedException interruptEx) {
+        echo "${interruptEx}"
+        currentBuild.result = "ABORTED"
+        env.DEPLOY_RESULT_DESCRIPTION += "<h4>:warning: Deploy Final Result: Aborted.<h4>"
+    } catch (InterruptedException ex) {
+        echo "${ex}"
+        currentBuild.result = "ABORTED"
+    } catch (err) {
+        echo "${err}"
+        echo "build result:"
+        echo "${currentBuild.result}"
+        if (currentBuild.result != "ABORTED") {
+            currentBuild.result = "FAILURE"
+            env.DEPLOY_RESULT_DESCRIPTION += "<h4>:x: Deploy Final Result: Failed.<h4>"
+        }
+        throw err
+    } finally {
+        stage ("Clean Build Environment") {
+            sh 'rm -rf *'
+            sh 'rm -rf .git'
+        }
+        env.DEPLOY_RESULT_DESCRIPTION += "<h4><i><a href='${env.BUILD_URL}display/redirect'>" +
+                "Deploy Process Details...</a></i></h4><br/><br/>"
+        env.DEPLOY_RESULT_TITLE = "Deploy version ${env.project_version} result"
+
+        echo "title: ${env.DEPLOY_RESULT_TITLE}"
+        echo "description: ${env.DEPLOY_RESULT_DESCRIPTION}"
+        withCredentials([string(credentialsId: 'gitlab-floor5-api-token', variable: 'gitlab_api_token')]) {
+            def issueContentJson = """
+                                    {
+                                        "title": "${env.DEPLOY_RESULT_TITLE}",
+                                        "description": "${env.DEPLOY_RESULT_DESCRIPTION}",
+                                        "labels": "Deploy Result"
+                                    }
+                                """
+            def createIssueResp = httpRequest([
+                    acceptType   : 'APPLICATION_JSON',
+                    httpMode     : 'POST',
+                    contentType  : 'APPLICATION_JSON',
+                    customHeaders: [[name: "PRIVATE-TOKEN", value: "${gitlab_api_token}"]],
+                    url          : "${env.GITLAB_PROJECT_API_URL}/issues",
+                    requestBody  : issueContentJson
+            ])
+        }
+    }
+}
+
+def bootstrap_roll_back(){
+    env.DEPLOY_RESULT_DESCRIPTION = ""
+    loadConfigFile()
+    try {
+        jenkinsfile_CD.rollBackTag()
+    }catch (FlowInterruptedException interruptEx){
+        echo "${interruptEx}"
+        currentBuild.result = "ABORTED"
+    }catch (InterruptedException ex){
+        currentBuild.result = "ABORTED"
+    }catch (err) {
+        echo "error: ${err}"
+        if (currentBuild.result != "ABORTED") {
+            currentBuild.result = "FAILURE"
+        }
+        env.DEPLOY_RESULT_DESCRIPTION += "<h4>:x: Rollback Final Result: Failed.<h4>"
+        throw err
+    }
+    finally {
+        stage("Clean Build Environment") {
+            sh 'rm -rf *'
+            sh 'rm -rf .git'
+        }
+        env.DEPLOY_RESULT_DESCRIPTION += "<h4><i><a href='${env.BUILD_URL}display/redirect'>" +
+                "Rollback Process Details...</a></i></h4><br/><br/>"
+        if (env.GIT_TAG_ROLLBACK == 'Aborted' || env.GIT_TAG_ROLLBACK == ''){
+            env.DEPLOY_RESULT_TITLE = "Rollback Tag aborted"
+        }else {
+            env.DEPLOY_RESULT_TITLE = "Rollback Tag ${env.GIT_TAG_ROLLBACK} result"
+        }
+
+        echo "title: ${env.DEPLOY_RESULT_TITLE}"
+        echo "description: ${env.DEPLOY_RESULT_DESCRIPTION}"
+
+        withCredentials([string(credentialsId: 'gitlab-floor5-api-token', variable: 'gitlab_api_token')]) {
+            def issueContentJson = """
+                                    {
+                                        "title": "${env.DEPLOY_RESULT_TITLE}",
+                                        "description": "${env.DEPLOY_RESULT_DESCRIPTION}",
+                                        "labels": "Rollback Result"
+                                    }
+                                """
+            def createIssueResp = httpRequest([
+                    acceptType   : 'APPLICATION_JSON',
+                    httpMode     : 'POST',
+                    contentType  : 'APPLICATION_JSON',
+                    customHeaders: [[name: "PRIVATE-TOKEN", value: "${gitlab_api_token}"]],
+                    url          : "${env.GITLAB_PROJECT_API_URL}/issues",
+                    requestBody  : issueContentJson
+            ])
+
+        }
+    }
+}
+
+return [
+        bootstrap_build: this.&bootstrap_build,
+        bootstrap_roll_back: this.&bootstrap_roll_back
+]

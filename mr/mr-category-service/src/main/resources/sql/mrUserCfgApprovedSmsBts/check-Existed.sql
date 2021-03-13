@@ -1,0 +1,4 @@
+select t1.USER_CFG_APPROVED_SMS_ID userCfgApprovedSmsId,
+t1.USERNAME userName
+from MR_USER_CFG_APPROVED_SMS_BTS t1
+WHERE 1 = 1

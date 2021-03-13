@@ -1,0 +1,80 @@
+version: '2.4'
+
+volumes:
+    gnoc_logs: {}
+    gnoc_log_pos: {}
+
+networks:
+  monitor:
+
+services:
+  jaeger-agent:
+    image: ${IMAGE_REGISTRY_URL}/jaegertracing/jaeger-agent:latest
+    command: ["--collector.host-port=jaeger-collector:14267"]
+    container_name: gnoc-jaeger
+    mem_limit: 268435456  # 256MB
+    network_mode: host
+    restart: always
+
+  node-exporter:
+    image: ${IMAGE_REGISTRY_URL}/prom/node-exporter:latest
+    container_name: gnoc-node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command: >
+      --path.procfs=/host/proc
+      --path.sysfs=/host/sys
+      --collector.filesystem.ignored-mount-points
+      ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+    ports: ['9100:9100']
+    mem_limit: 268435456  # 256MB
+    networks: [monitor]
+    restart: always
+
+  cadvisor:
+    image: ${IMAGE_REGISTRY_URL}/google/cadvisor:latest
+    container_name: gnoc-cadvisor
+    volumes:
+      - /:/rootfs:rshared
+      - /var/run:/var/run:rshared
+      - /sys:/sys:rshared
+      - /var/lib/docker/:/var/lib/docker:rshared
+      - /cgroup:/cgroup:rshared
+    ports: ['8002:8080']
+    mem_limit: 268435456  # 256MB
+    networks: [monitor]
+    restart: always
+
+  fluentd:
+    image: ${IMAGE_REGISTRY_URL}/fluentd:latest
+    container_name: gnoc-fluentd
+    network_mode: "host"
+    environment:
+      - FLUENT_UID=1001
+    mem_limit: 536870912  # 512MB
+    volumes:
+      - ./fluentd/:/fluentd/etc/
+      - gnoc_logs:/gnoc
+      - gnoc_log_pos:/fluentd/log/
+    restart: always
+
+  blackbox-exporter:
+    image: ${IMAGE_REGISTRY_URL}/prom/blackbox-exporter:latest
+    container_name: gnoc-blackbox-exporter
+    ports: ['9115:9115']
+    mem_limit: 268435456  # 256MB
+    command: --config.file=/config/blackbox.yml
+    volumes:
+      - ./blackbox/:/config
+    networks: [monitor]
+    restart: always
+
+  cron:
+    image: ${IMAGE_REGISTRY_URL}/cron-clean-old-log:latest
+    container_name: gnoc-cron-clean-old-log
+    mem_limit: 268435456  # 256MB
+    volumes:
+      - gnoc_logs:/gnoc
+    restart: always

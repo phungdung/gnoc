@@ -1,0 +1,7 @@
+SELECT A.CONFIG_CODE configCode ,
+  A.CONFIG_NAME configName ,
+  A.CONFIG_GROUP configGroup ,
+  A.PARENT_GROUP parentGroup
+FROM OPEN_PM.SR_CONFIG A
+WHERE 1    = 1
+AND STATUS = 'A'

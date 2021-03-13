@@ -1,0 +1,23 @@
+---
+
+- name: Deploy service in production
+  hosts: "{{SERVICE_NAME}}"
+  tasks:
+    - name: Create check-service.sh file
+      copy:
+        mode: 0755
+        src: "{{CURRENT_JENKINS_LOCAL_DIR}}/cicd/deploy-production/ansible/ultilities/files/check-service.sh"
+        dest: "{{SERVER_WORKING_DIR}}"
+
+    - name: Check version and start service if necessary
+      shell:
+        cmd: "./check-service.sh  {{SERVICE_NAME}} {{ROLLBACK_SERVICE_VERSION}} {{DOCKER_PULL_IMAGE_SERVICE}}
+        {{jdk_image_base}} {{SERVICE_PORT}} {{mem_limit_config_init_heap_size}} {{mem_limit_config_max_heap_size}}
+        {{active_profile}} {{eureka_profile}} {{cloud_config_git_uri}} {{label}} {{cloud_config_uri}}"
+        chdir: "{{SERVER_WORKING_DIR}}"
+
+    - name: wait for service port up
+      wait_for:
+        host: "127.0.0.1"
+        port: "{{SERVICE_PORT}}"
+        timeout: "{{TIMEOUT_SERVICE_PORT_UP}}"

@@ -1,0 +1,320 @@
+heat_template_version: queens
+description: Template for a vsmart service
+parameters:
+
+  image:
+    type: string
+    description: Image used for servers
+  flavor:
+    type: string
+    description: flavor used by the servers
+  key_name:
+    type: string
+    description: Name of keypair to assign to servers
+  network:
+    type: string
+    description: Network used by the server
+  subnet:
+    type: string
+    description: Subnet used by the server
+  security_group:
+    type: string
+    description: security_group which will be apply for this service
+
+  service_name:
+    type: string
+    description: vsmart service name
+  service_template:
+    type: string
+    description: template for service vsmart_gateway_service.yaml or vsmart_cloudconfig_service.yaml or vmsart_common_service.yaml
+  service_version:
+    type: string
+  service_docker_image_repo:
+    type: string
+    description: >-
+      docker image_repo for service which will run in this server, include service
+      image name and version
+
+  service_log_volume:
+    type: string
+    description: >-
+      docker volume contains service logs
+  elastic_search_ip:
+    type: string
+    description: elastic search ip
+  jaeger_collector_url:
+    type: string
+    description: jaeger_collector_url with ip and port
+  working_dir:
+    type: string
+    description: VM working directory
+  cloud_config_uri:
+    type: string
+    description: Cloud config URI Address
+  cloud_config_commit_id:
+    type: string
+    description: Cloud config commit id used for this deploy
+  active_profile:
+    type: string
+    description: Service active profile config
+  service_port:
+    type: number
+    description: fixed port of gateway service
+
+  flag:
+    type: boolean
+    description: enable alarm
+  project_id:
+    type: string
+    description: openstack project id for autoscaling isolation in only one project
+  min_size:
+    type: number
+    description: min vm per services
+  max_size:
+    type: number
+    description: max vm per services
+
+  ram_high_threshold:
+    type: number
+    description: memory usage threshold when scale out
+  ram_low_threshold:
+    type: number
+    description: memory usage threshold when scale in
+  cpu_high_threshold:
+    type: number
+    description: cpu percent threshold when scale out
+  cpu_low_threshold:
+    type: number
+    description: cpu percent threshold when scale in
+
+  scale_up_cooldown:
+    type: number
+    description: time seconds between two scaling up actions
+  scaling_up_adjustment:
+    type: number
+    description: scaling_adjustment vm number between two scaling up actions
+  scale_up_evaluation_periods:
+    type: number
+    description: number of sample aodh used when decide to scale up
+  scale_up_granularity:
+    type: number
+    description: time between two aodh evaluation action scale up calculation
+
+  scale_down_cooldown:
+    type: number
+    description: time seconds between two scaling down actions
+  scaling_down_adjustment:
+    type: number
+    description: scaling_adjustment vm number between two scaling down actions
+  scale_down_evaluation_periods:
+    type: number
+    description: number of sample aodh used when decide to scale down
+  scale_down_granularity:
+    type: number
+    description: time between two aodh evaluation action scale down calculation
+
+# specific properties for xmx xms and container memory limit restriction
+  service_container_mem_limit:
+    type: number
+    description: Service container memory limit, unit byte
+  init_heap_size:
+    type: number
+    description: Init heap size value, unit megabyte - Xms flag
+  max_heap_size:
+    type: number
+    description: Max heap size value, unit megabyte - Xmx flag
+
+# properties for health check
+  health_check_interval:
+    type: number
+    description: Health check interval
+  health_check_timeout:
+    type: number
+    description: Health check timeout
+  health_check_retry:
+    type: number
+    description: Health check retry
+
+# cloud config specific param
+  private_lb_pool_id:
+    type: string
+    description: Pool id of public Load balancer connect to  gateway service
+    default: ""
+  cloud_config_git_uri:
+    type: string
+    description: Uri of git repository which cloudconfig service connect with
+    default: ""
+
+# gateway specific param
+  public_lb_pool_id:
+    type: string
+    description: Pool id of public Load balancer connect to  gateway service
+    default: ""
+  cloud_gateway_2nd_network:
+    type: string
+    description: cloud gateway 2nd interface network
+    default: ""
+  cloud_gateway_2nd_subnet:
+    type: string
+    description: cloud gateway 2nd interface subnet
+    default: ""
+
+resources:
+  vsmart_service_asg:
+    type: OS::Heat::AutoScalingGroup
+    properties:
+      min_size: {get_param: min_size}
+      max_size: {get_param: max_size}
+      resource:
+        type: {get_param: service_template}
+        properties:
+
+          flavor: {get_param: flavor}
+          image: {get_param: image}
+          key_name: {get_param: key_name}
+          network: { get_param: network }
+          subnet: { get_param: subnet }
+          metadata: { "metering.server_group": {list_join: ['-', ['vsmart', { get_param: service_name }]]}, "microservice": {get_param: service_name}, "monitoring": "1", "service": "vsmart" }
+          security_group: { get_param: security_group }
+
+          service_version: { get_param: service_version }
+          service_docker_image_repo: { get_param: service_docker_image_repo }
+          elastic_search_ip: { get_param: elastic_search_ip}
+          jaeger_collector_url: {get_param: jaeger_collector_url}
+          working_dir: { get_param: working_dir }
+          service_name: {get_param: service_name}
+          service_log_volume: { get_param: service_log_volume }
+          cloud_config_uri: { get_param: cloud_config_uri }
+          cloud_config_commit_id: {get_param: cloud_config_commit_id}
+          service_port: {get_param: service_port}
+          active_profile: { get_param: active_profile }
+
+          health_check_interval: { get_param: health_check_interval }
+          health_check_timeout: { get_param: health_check_timeout }
+          health_check_retry: { get_param: health_check_retry }
+
+          init_heap_size: { get_param: init_heap_size }
+          max_heap_size: { get_param: max_heap_size }
+          service_container_mem_limit: { get_param: service_container_mem_limit }
+
+          private_lb_pool_id: {get_param: private_lb_pool_id}
+          cloud_config_git_uri: {get_param: cloud_config_git_uri}
+
+          public_lb_pool_id: {get_param: public_lb_pool_id}
+          cloud_gateway_2nd_network: {get_param: cloud_gateway_2nd_network}
+          cloud_gateway_2nd_subnet: {get_param: cloud_gateway_2nd_subnet}
+
+  vsmart_service_scaleup_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: {get_resource: vsmart_service_asg}
+      cooldown: {get_param: scale_up_cooldown}
+      scaling_adjustment: {get_param: scaling_up_adjustment}
+
+  vsmart_service_scaledown_policy:
+    type: OS::Heat::ScalingPolicy
+    properties:
+      adjustment_type: change_in_capacity
+      auto_scaling_group_id: {get_resource: vsmart_service_asg}
+      cooldown: {get_param: scale_down_cooldown}
+      scaling_adjustment: {get_param: scaling_down_adjustment}
+
+  vsmart_ram_alarm_high:
+    type: OS::Aodh::GnocchiAggregationByResourcesAlarm
+    properties:
+      description: Scale up if RAM > ram_high_threshold MB for 5 minutes
+      metric: memory.usage
+      aggregation_method: mean
+      granularity: {get_param: scale_up_granularity}
+      evaluation_periods: {get_param: scale_up_evaluation_periods}
+      threshold: {get_param: ram_high_threshold}
+      resource_type: instance
+      comparison_operator: gt
+      severity: moderate
+      enabled: { get_param: flag }
+      alarm_actions:
+        - str_replace:
+            template: trust+url
+            params:
+              url: {get_attr: [vsmart_service_scaleup_policy, signal_url]}
+      query:
+        list_join:
+          - ''
+          - - {'and': [{'=': {server_group: {list_join: ['-', ['vsmart', { get_param: service_name }]]}}}, {'=': {ended_at: null}}, {'=': {project_id: {get_param: project_id}}}]}
+
+  vsmart_cpu_alarm_high:
+    type: OS::Aodh::GnocchiAggregationByResourcesAlarm
+    properties:
+      description: Scale up if CPU > cpu_high_threshold% for 5 minutes
+      metric: cpu_util
+      aggregation_method: mean
+      granularity: {get_param: scale_up_granularity}
+      evaluation_periods: {get_param: scale_up_evaluation_periods}
+      threshold: {get_param: cpu_high_threshold}
+      resource_type: instance
+      comparison_operator: gt
+      severity: moderate
+      enabled: { get_param: flag }
+      alarm_actions:
+        - str_replace:
+            template: trust+url
+            params:
+              url: {get_attr: [vsmart_service_scaleup_policy, signal_url]}
+      query:
+        list_join:
+          - ''
+          - - {'and': [{'=': {server_group: {list_join: ['-', ['vsmart', { get_param: service_name }]]}}}, {'=': {ended_at: null}}, {'=': {project_id: {get_param: project_id}}}]}
+
+  vsmart_cpu_and_ram_low_alarm:
+    type: OS::Aodh::CompositeAlarm
+    properties:
+      description: Scale down if CPU < 20%  amd RAM < 2048 MB for 5 minutes
+      enabled: { get_param: flag }
+      severity: moderate
+      alarm_actions:
+        - str_replace:
+            template: trust+url
+            params:
+              url: {get_attr: [vsmart_service_scaledown_policy, signal_url]}
+      composite_rule:
+        operator: and
+        rules:
+        - type: gnocchi_aggregation_by_resources_threshold
+          metric: cpu_util
+          aggregation_method: mean
+          granularity: {get_param: scale_down_granularity}
+          evaluation_periods: {get_param: scale_down_evaluation_periods}
+          threshold: {get_param: cpu_low_threshold}
+          comparison_operator: lt
+          resource_type: instance
+          query:
+            str_replace:
+              template: '{"and": [{"=": {"server_group": "vsmart-param_service_name"}}, {"=": {"ended_at": null}}, {"=": {"project_id": "param_project_id"}}]}'
+              params:
+                param_service_name: { get_param: service_name }
+                param_project_id: { get_param: project_id }
+
+        - type: gnocchi_aggregation_by_resources_threshold
+          metric: memory.usage
+          aggregation_method: mean
+          granularity: {get_param: scale_down_granularity}
+          evaluation_periods: {get_param: scale_down_evaluation_periods}
+          threshold: {get_param: ram_low_threshold}
+          comparison_operator: lt
+          resource_type: instance
+          query:
+            str_replace:
+              template: '{"and": [{"=": {"server_group": "vsmart-param_service_name"}}, {"=": {"ended_at": null}}, {"=": {"project_id": "param_project_id"}}]}'
+              params:
+                param_service_name: { get_param: service_name }
+                param_project_id: { get_param: project_id }
+
+
+outputs:
+  scale_up_url:
+    description: >
+      This URL is the webhook to scale up the autoscaling group.  You
+      can invoke the scale-up operation by doing an HTTP POST to this
+      URL; no body nor extra headers are needed.
+    value: {get_attr: [vsmart_service_scaleup_policy, alarm_url]}

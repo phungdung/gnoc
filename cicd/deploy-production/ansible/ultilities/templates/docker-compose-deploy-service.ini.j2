@@ -1,0 +1,39 @@
+version: '3.2'
+
+volumes:
+  gnoc_logs: {}
+
+services:
+  {{SERVICE_NAME}}:
+    build:
+      context: ./
+      args:
+        PROJECT_VERSION: {{SERVICE_VERSION}}
+        JDK_BASE_IMAGE: {{jdk_image_base}}
+    image: "{{DOCKER_PULL_IMAGE_REGISTRY}}"
+    container_name: "{{SERVICE_NAME}}"
+    ports: ['{{SERVICE_PORT}}:{{SERVICE_PORT}}']
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    entrypoint: java -Xms{{ mem_limit_config_init_heap_size }}m -Xmx{{ mem_limit_config_max_heap_size }}m -Djava.security.egd=file:///dev/urandom -jar /app/{{ SERVICE_NAME }}.jar
+{% if SERVICE_NAME == 'configuration-service' %}
+    command: ["--spring.profiles.active={{active_profile}},{{eureka_profile}}", "--spring.cloud.config.server.git.uri={{cloud_config_git_uri}}", "--spring.cloud.config.label={{label}}", "--server.port={{SERVICE_PORT}}"]
+{% elif SERVICE_NAME == 'discovery-service' %}
+    command: ["--spring.cloud.config.uri={{cloud_config_uri}}", "--spring.cloud.config.server.git.uri={{cloud_config_git_uri}}", "--spring.cloud.config.label={{label}}", "--spring.profiles.active={{active_profile}},{{eureka_profile}}", "--server.port={{SERVICE_PORT}}"]
+{% elif SERVICE_NAME == 'hazelcast-service' %}
+    command: ["--spring.cloud.config.uri={{cloud_config_uri}}", "--spring.cloud.config.server.git.uri={{cloud_config_git_uri}}", "--spring.cloud.config.label={{label}}", "--spring.profiles.active={{active_profile}},{{eureka_profile}}", "--server.port={{SERVICE_PORT}}"]
+{% elif SERVICE_NAME == 'gateway-service' %}
+    command: ["--spring.cloud.config.uri={{cloud_config_uri}}", "--spring.cloud.config.server.git.uri={{cloud_config_git_uri}}", "--spring.cloud.config.label={{label}}", "--spring.profiles.active={{active_profile}}", "--server.port={{SERVICE_PORT}}"]
+{% else %}
+    command: ["--spring.cloud.config.uri={{cloud_config_uri}}", "--spring.cloud.config.server.git.uri={{cloud_config_git_uri}}", "--spring.cloud.config.label={{label}}", "--spring.profiles.active={{active_profile}}", "--server.port={{SERVICE_PORT}}"]
+{% endif %}
+    healthcheck:
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      test: ["CMD", "curl", "-f", "http://localhost:{{SERVICE_PORT}}/actuator/health"]
+    restart: always
+
+

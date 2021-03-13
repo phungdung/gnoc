@@ -1,0 +1,61 @@
+---
+  - name: Set openstack cloud authentication info
+    set_fact:
+      os_auth:
+        auth_url: "{{openstack_auth_url}}"
+        username: "{{openstack_username}}"
+        password: "{{openstack_password}}"
+        user_domain_name: "{{openstack_user_domain_name}}"
+        project_domain_name: "{{openstack_project_domain_name}}"
+        project_name: "{{openstack_project_name}}"
+
+  - name: Create  or Update Stack
+    os_stack:
+      name: "{{stack_name}}"
+      state: present
+      template: "{{CURRENT_JENKINS_LOCAL_DIR}}/../heat-stack/vsmart_heat_template.yaml"
+      environment:
+        - "{{CURRENT_JENKINS_LOCAL_DIR}}/../heat-stack/environment_registry.yaml"
+      region_name: "RegionOne"
+      auth: "{{os_auth}}"
+      wait: yes
+      parameters:
+
+        #VM properties
+        image: "{{vm_image}}"
+        vsmart_service_flavor: "{{vsmart_service_flavor}}"
+        gateway_config_flavor: "{{gateway_config_flavor}}"
+        key_name: "{{key_name}}"
+        network: "{{network_name}}"
+        subnet: "{{subnet_name}}"
+        security_group: "{{security_group_name}}"
+
+        # Service properties
+        service_version: "{{service_version}}"
+        service_docker_image_repo: "{{docker_pull_image_registry_url}}/vsmart/{{docker_repo_name}}"
+
+        service_log_volume: "{{service_log_volume}}"
+        elastic_search_ip: "{{elastic_search_ip}}"
+        jaeger_collector_url: "{{jaeger_collector_url}}"
+        working_dir: "{{working_dir}}"
+
+        cloud_config_uri: "{{cloud_config_uri}}"
+        cloud_config_commit_id: "{{cloud_config_git_commit_id}}"
+        active_profile: "{{active_profile}}"
+
+        # Cloud Gateway properties
+        public_lb_pool_id: "{{public_lb_pool_id}}"
+        cloud_gateway_2nd_network: "{{cloud_gateway_2nd_network}}"
+        cloud_gateway_2nd_subnet: "{{cloud_gateway_2nd_subnet}}"
+
+        # Cloud Config properties
+        private_lb_pool_id: "{{private_lb_pool_id}}"
+        cloud_config_git_uri: "{{cloud_config_git_uri}}"
+
+        # Scaling properties
+        flag: "true"
+
+    register: stack_create_result
+
+  - debug:
+      msg: "{{stack_create_result.stack.outputs}}"

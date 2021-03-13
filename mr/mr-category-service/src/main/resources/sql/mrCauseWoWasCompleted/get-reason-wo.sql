@@ -1,0 +1,6 @@
+SELECT REASON_CODE reasonCode,
+  REASON_NAME reasonName,
+  WAITING_TIME waitingTime,
+  VALIDATE_PROCESS validateProcess
+FROM OPEN_PM.CAUSE_WO_WAS_COMPLETED
+WHERE REASON_TYPE = :reasonType

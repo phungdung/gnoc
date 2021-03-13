@@ -1,0 +1,55 @@
+---
+- name: Create Heat Stack
+  hosts: local
+  tasks:
+  - name: Set openstack cloud authz-service info
+    set_fact:
+      os_auth:
+        auth_url: "{{openstack_staging_auth_url}}"
+        username: "{{ openstack_username }}"
+        password: "{{ openstack_password }}"
+        user_domain_name: "{{staging_user_domain_name}}"
+        project_domain_name: "{{staging_project_domain_name}}"
+        project_name: "{{staging_project_name}}"
+
+  - name: create stack
+    ignore_errors: False
+    register: stack_create_result
+    os_stack:
+      name: "{{ stack_name }}"
+      template: "staging_heat_template.yml"
+      region_name: "RegionOne"
+      auth: "{{ os_auth }}"
+      wait: yes
+      parameters:
+        server_name: "staging-{{server_name}}"
+        key_name: "{{staging_ssh_key}}"
+        flavor: "{{staging_flavor}}"
+        image: "{{staging_image}}" # centos, docker and docker-compose, docker python lib
+        public_net_id: "{{staging_public_net_id}}" # 193.0/24
+        public_subnet_id: "{{staging_public_subnet_id}}" # 193.0/24
+        private_net_id: "{{staging_private_net_id}}" # cicd_staging_net_vlan138
+        private_subnet_id: "{{staging_private_subnet_id}}"
+        gitlab_merge_source_branch: "{{ gitlab_merge_source_branch }}"
+        gitlab_merge_target_branch: "{{ gitlab_merge_target_branch }}"
+        gitlab_project_api_url: "{{ gitlab_project_api_url }}"
+
+  - debug:
+      msg: "{{stack_create_result.stack.outputs[0]['output_value']}}"
+
+  - name: Wait for SSH port up
+    wait_for:
+      port: 22
+      host: "{{stack_create_result.stack.outputs[0]['output_value']}}"
+      delay: 3
+      timeout: 600
+
+  - name: check result
+    debug:
+      msg: "{{ stack_create_result.stack.outputs }}"
+
+  - name: save result
+    copy:
+      content: "{{ stack_create_result.stack.outputs }}"
+      dest: "staging_server_ip.json"
+

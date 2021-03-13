@@ -1,0 +1,10 @@
+SELECT WO_ID woId,
+  RTRIM(XMLAGG(XMLELEMENT(E,WO_WORKLOG_CONTENT,',').EXTRACT('//text()')).GetClobVal(),',') note
+FROM WFM.WO_WORKLOG
+WHERE 1                 =1
+AND WO_SYSTEM           = 'MR'
+AND WO_WORKLOG_CONTENT IS NOT NULL
+AND UPDATE_TIME        >= TO_DATE(:fromDateWo,'dd/MM/yyyy HH24:mi:ss')
+AND UPDATE_TIME        <= TO_DATE(:toDateWo,'dd/MM/yyyy HH24:mi:ss')
+GROUP BY WO_ID
+ORDER BY WO_ID DESC

@@ -1,0 +1,6 @@
+---
+- name: Create docker compose file for vsmart production
+  template:
+    src: "docker-compose-gnoc.yml.j2"
+    dest: "{{CURRENT_JENKINS_LOCAL_DIR}}/../../../deploy/docker-compose-gnoc.yml"
+    mode: 0644

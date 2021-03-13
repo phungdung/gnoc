@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: documentation-service
+  cloud:
+    config:
+      uri: http://localhost:8062

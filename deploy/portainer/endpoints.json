@@ -1,0 +1,6 @@
+[
+    {
+      "Name": "gnoc-testbed",
+      "URL": "unix:///var/run/docker.sock"
+    }
+]

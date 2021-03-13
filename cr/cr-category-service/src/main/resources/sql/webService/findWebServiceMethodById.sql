@@ -1,0 +1,10 @@
+SELECT
+t1.WEBSERVICE_METHOD_ID webServiceMethodId,
+t1.WEBSERVICE_ID webServiceId,
+t1.METHOD_NAME methodName,
+t1.SUCESS_RETURN_VALUE sucessReturnValue,
+t1.CLASS_PATH classPath,
+t1.ID_FIELD idField,
+t1.RETURN_VALUE_FIELD returnValueField,
+t1.IS_MERGE isMerge
+FROM OPEN_PM.WEBSERVICE_METHOD t1 WHERE t1.WEBSERVICE_ID = :webServiceId

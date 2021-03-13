@@ -1,0 +1,6 @@
+SELECT
+a.NUM_AON numAon,
+a.NUM_GPON numGpon,
+a.NUM_NEXTTV numNexttv,
+a.NUM_THC numThc
+FROM ONE_TM.TROUBLES a WHERE a.TROUBLE_ID =:troubleID;

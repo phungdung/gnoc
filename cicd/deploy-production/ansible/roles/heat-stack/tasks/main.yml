@@ -1,0 +1,2 @@
+---
+- include: "{{ heat_stack_action }}.yml"

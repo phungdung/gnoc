@@ -1,0 +1,8 @@
+SELECT CONFIG_GROUP configGroup,
+  CONFIG_CODE configCode,
+  CONFIG_NAME configName,
+  COUNTRY country,
+  CONFIG_VALUE configValue
+FROM OPEN_PM.MR_CONFIG
+WHERE CONFIG_GROUP = :configGroup
+ORDER BY CONFIG_CODE

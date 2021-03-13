@@ -1,0 +1,67 @@
+server:
+  port: 9299
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8061/eureka/
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: -1
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: 6e72e4ffd4a7e4f5e9462d08111766b5022d42517c868ded6fcb73ddd82f2b8242f2fabd241a7e81e59e20cf4e83e5c3
+    username: beee429cd52c7740635a6b21fabb90db
+    password: a10b816affc715f0ad7a0f238d92e268
+    hikari:
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      maximum-pool-size: 40
+      minimum-idle: 5
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.Oracle10gDialect
+        show_sql: true
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 30000
+        readTimeout: 30000
+        loggerLevel: full
+logging:
+  file: ./log/mr-outside-service.log
+  file.max-history: 10
+  file.max-size: 10MB
+  level:
+    ROOT: info
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan}%clr(:%-5L){magenta} %16X{traceId}:%16X{spanId} %clr(:){faint} %m%n%wEx"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } --- [%t] %-40.40logger{39}:%-5L %16X{traceId}:%16X{spanId} : %m%n%wEx"
+opentracing:
+  jaeger:
+    udp-sender:
+      host: localhost
+      port: 6831
+    log-spans: false
+    probabilistic-sampler:
+      sampling-rate: 0.01
+
+application:
+  ftp:
+    server: 10.240.232.25
+    port: 21
+    user: 429585a63e5e23f3a5f7c64a0ddd5f29
+    pass: d7d9574824a43ad32007b26cd1957efd
+    folder: gnoc2/mr-upload
+  upload:
+    folder: /data2/MR
+  temp:
+    folder: ./mr-temp

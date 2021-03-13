@@ -1,0 +1,4 @@
+SELECT Id, INCIDENT_ID incidentId, account
+FROM ONE_TM.IT_ACCOUNT
+WHERE
+1 = 1 

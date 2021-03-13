@@ -1,0 +1,13 @@
+SELECT
+MN.MR_NODE_ID mrNodeId,
+MN.SCHEDULE_TEL_ID scheduleTelId,
+MN.MR_ID mrId,
+MN.CR_ID crId,
+MN.WO_ID woId,
+MN.NODE_IP nodeIp,
+MN.NODE_CODE nodeCode,
+MN.NODE_NAME nodeName,
+MN.STATUS status,
+MN.COMMENTS comments,
+MN.UPDATE_DATE updateDate
+FROM MR_NODES MN WHERE 1=1

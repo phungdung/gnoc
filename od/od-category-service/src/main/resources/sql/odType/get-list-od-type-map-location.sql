@@ -1,0 +1,17 @@
+SELECT
+  otml.ID id,
+  otml.OD_TYPE_ID odTypeId,
+  otml.LOCATION_CODE locationCode,
+  otml.CREATE_UNIT_ID createUnitId,
+  u1.UNIT_CODE createUnitCode,
+  otml.RECEIVE_UNIT_ID receiveUnitId,
+  u2.UNIT_CODE receiveUnitCode,
+  u1.UNIT_NAME createUnitName,
+  u2.UNIT_NAME receiveUnitName,
+  cl.LOCATION_NAME locationName
+FROM
+  WFM.OD_TYPE_MAP_LOCATION otml
+  LEFT JOIN COMMON_GNOC.UNIT u1 ON otml.CREATE_UNIT_ID = u1.UNIT_ID
+  LEFT JOIN COMMON_GNOC.UNIT u2 ON otml.RECEIVE_UNIT_ID = u2.UNIT_ID
+  LEFT JOIN COMMON_GNOC.CAT_LOCATION cl ON otml.LOCATION_CODE = cl.LOCATION_CODE
+WHERE 1 = 1

@@ -1,0 +1,160 @@
+heat_template_version: queens
+description: Template for a gnoc service
+parameters:
+
+  # VM properties
+  image:
+    type: string
+    description: VM Image used for servers
+  vsmart_service_flavor:
+    type: string
+    description: flavor used by the vsmart service servers
+  gateway_config_flavor:
+    type: string
+    description: flavor used by the   servers
+  key_name:
+    type: string
+    description: Name of keypair to assign to servers
+  network:
+    type: string
+    description: Network used by the servers
+  subnet:
+    type: string
+    description: Subnet used by the servers
+  security_group:
+    type: string
+    description: security_group which will be apply for services
+
+  # gateway VM specific param
+  public_lb_pool_id:
+    type: string
+    description: Pool id of public Load balancer connect to  gateway service
+  cloud_gateway_2nd_network:
+    type: string
+    description: cloud gateway 2nd interface network
+  cloud_gateway_2nd_subnet:
+    type: string
+    description: cloud gateway 2nd interface subnet
+
+  # cloud config VM specific param
+  private_lb_pool_id:
+    type: string
+    description: Pool id of public Load balancer connect to  gateway service
+  cloud_config_git_uri:
+    type: string
+    description: Uri of git repository which cloudconfig service connect with
+
+  # auto scaling properties
+  flag:
+    type: boolean
+    description: enable alarm
+
+  #application properties
+  service_docker_image_repo:
+    type: string
+    description: >-
+      docker image_repo for service which will run in this server, include service
+      image name and version
+  service_log_volume:
+    type: string
+    description: >-
+      docker volume contains services logs
+  elastic_search_ip:
+    type: string
+    description: elastic search ip
+  jaeger_collector_url:
+    type: string
+    description: jaeger_collector_url
+  working_dir:
+    type: string
+    description: VM working directory
+  cloud_config_uri:
+    type: string
+    description: Cloud config URI Address
+  cloud_config_commit_id:
+    type: string
+    description: Cloud config commit id used for this deploy
+  active_profile:
+    type: string
+    description: Service active profile config
+
+resources:
+
+{% for service, version in map_module_version.iteritems() %}
+{% if service != 'discovery-service' %}
+
+  vsmart-{{service}}-asg:
+    type: OS::Vsmart::Service::Autoscaling
+    properties:
+      service_name: "{{service}}"
+{% if service == 'configuration-service' %}
+      service_template: OS::Vsmart::Service::CloudConfig
+{% elif service == 'gateway-service' %}
+      service_template: OS::Vsmart::Service::Gateway
+{% else %}
+      service_template: OS::Vsmart::Service::Common
+{% endif %}
+      service_version: {{ version }}
+      service_docker_image_repo: { get_param: service_docker_image_repo }
+{% if services_flavor[service] is defined %}
+      flavor: {{ services_flavor[service] }}
+{% else %}
+      flavor: {{ services_flavor["default"] }}
+{% endif %}
+      image: {get_param: image}
+      key_name: {get_param: key_name}
+      network: { get_param: network }
+      subnet: { get_param: subnet }
+      security_group: { get_param: security_group }
+      elastic_search_ip: { get_param: elastic_search_ip}
+      jaeger_collector_url: {get_param: jaeger_collector_url}
+      working_dir: { get_param: working_dir }
+      service_log_volume: { get_param: service_log_volume }
+      cloud_config_uri: { get_param: cloud_config_uri }
+      cloud_config_commit_id: {get_param: cloud_config_commit_id}
+      service_port: {{SERVICE_PORT_LIST[service]}}
+      active_profile: { get_param: active_profile }
+
+      flag: { get_param: flag }
+      min_size: {{ autoscaling.minsize}}
+      max_size: {{ autoscaling.maxsize}}
+      project_id: {{ openstack_project_id }}
+
+      ram_high_threshold: {{ autoscaling.ram_high_threshold}}
+      ram_low_threshold: {{ autoscaling.ram_low_threshold}}
+      cpu_high_threshold: {{ autoscaling.cpu_high_threshold}}
+      cpu_low_threshold: {{ autoscaling.cpu_low_threshold}}
+
+      scale_out_cooldown: {{ autoscaling.scale_out_cooldown }}
+      scaling_out_adjustment: {{ autoscaling.scaling_out_adjustment }}
+      scale_out_evaluation_periods: {{ autoscaling.scale_out_evaluation_periods }}
+      scale_out_granularity: {{ autoscaling.scale_out_granularity }}
+
+      scale_in_cooldown: {{ autoscaling.scale_in_cooldown }}
+      scaling_in_adjustment: {{ autoscaling.scaling_in_adjustment }}
+      scale_in_evaluation_periods: {{ autoscaling.scale_in_evaluation_periods }}
+      scale_in_granularity: {{ autoscaling.scale_in_granularity }}
+
+      health_check_interval: {{ health_check.interval }}
+      health_check_timeout: {{ health_check.timeout }}
+      health_check_retry: {{ health_check.retry }}
+
+{% if service_mem_limit_config[service] is defined %}
+      init_heap_size: {{ service_mem_limit_config[service].init_heap_size }}
+      max_heap_size: {{ service_mem_limit_config[service].max_heap_size }}
+      service_container_mem_limit: {{ service_mem_limit_config[service].service_container_mem_limit }}
+{% else %}
+      init_heap_size: {{ service_mem_limit_config["default"].init_heap_size }}
+      max_heap_size: {{ service_mem_limit_config["default"].max_heap_size }}
+      service_container_mem_limit: {{ service_mem_limit_config["default"].service_container_mem_limit }}
+{% endif %}
+
+      private_lb_pool_id: {get_param: private_lb_pool_id}
+      cloud_config_git_uri: {get_param: cloud_config_git_uri}
+
+      public_lb_pool_id: {get_param: public_lb_pool_id}
+      cloud_gateway_2nd_network: {get_param: cloud_gateway_2nd_network}
+      cloud_gateway_2nd_subnet: {get_param: cloud_gateway_2nd_subnet}
+
+{% endif %}
+{% endfor %}

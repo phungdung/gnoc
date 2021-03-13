@@ -1,0 +1,94 @@
+[all:vars]
+ansible_connection=ssh
+ansible_ssh_user={{SSH_USER_NAME}}
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+SERVER_WORKING_DIR={{server_working_dir}}
+JDK_IMAGE_BASE={{jdk_image_base}}
+DOCKER_PULL_IMAGE_REGISTRY={{ DOCKER_PULL_IMAGE_SERVICE }}
+cloud_config_uri={{CLOUD_CONFIG_URI}}
+cloud_config_git_uri={{CLOUD_CONFIG_GIT_URI}}
+mem_limit_config_init_heap_size={{service_mem_limit_config_max_heap_size}}
+mem_limit_config_max_heap_size={{service_mem_limit_config_max_heap_size}}
+active_profile=production
+label={{LABEL}}
+eureka_profile=native
+CURRENT_JENKINS_LOCAL_DIR = {{current_jenkins_local_dir}}
+ROLLBACK_SERVICE_VERSION = {{SERVICE_VERSION}}
+
+[gnoc-microservice:children]
+configuration-service
+discovery-service
+hazelcast-service
+common-stream-service
+authen-service
+od-outside-service
+od-service
+od-category-service
+gateway-service
+
+[configuration-service]
+configuration-service ansible_port=22 ansible_host=10.240.232.72 ansible_ssh_private_key_file={{SSH_PRIVATE_KEY_PATH}}
+
+[configuration-service:vars]
+SERVICE_NAME=configuration-service
+SERVICE_PORT=9002
+
+
+[discovery-service]
+discovery-service ansible_port=22 ansible_host=10.240.232.72 ansible_ssh_private_key_file={{SSH_PRIVATE_KEY_PATH}}
+
+[discovery-service:vars]
+SERVICE_NAME=discovery-service
+SERVICE_PORT=9003
+
+[hazelcast-service]
+hazelcast-service ansible_port=22 ansible_host=10.240.232.72 ansible_ssh_private_key_file={{SSH_PRIVATE_KEY_PATH}}
+
+[hazelcast-service:vars]
+SERVICE_NAME=hazelcast-service
+SERVICE_PORT=9000
+
+
+[common-stream-service]
+common-stream-service ansible_port=22 ansible_host=10.240.232.72 ansible_ssh_private_key_file={{SSH_PRIVATE_KEY_PATH}}
+
+[common-stream-service:vars]
+SERVICE_NAME=common-stream-service
+SERVICE_PORT=9004
+
+[authen-service]
+authen-service ansible_port=22 ansible_host=10.240.232.72 ansible_ssh_private_key_file={{SSH_PRIVATE_KEY_PATH}}
+
+[authen-service:vars]
+SERVICE_NAME=authen-service
+SERVICE_PORT=9005
+
+
+[od-outside-service]
+od-outside-service ansible_port=22 ansible_host=10.240.232.72 ansible_ssh_private_key_file={{SSH_PRIVATE_KEY_PATH}}
+
+[od-outside-service:vars]
+SERVICE_NAME=od-outside-service
+SERVICE_PORT=9006
+
+[od-service]
+od-service ansible_port=22 ansible_host=10.240.232.72 ansible_ssh_private_key_file={{SSH_PRIVATE_KEY_PATH}}
+
+[od-service:vars]
+SERVICE_NAME=od-service
+SERVICE_PORT=9007
+
+
+[od-category-service]
+od-category-service ansible_port=22 ansible_host=10.240.232.72 ansible_ssh_private_key_file={{SSH_PRIVATE_KEY_PATH}}
+
+[od-category-service:vars]
+SERVICE_NAME=od-category-service
+SERVICE_PORT=9008
+
+[gateway-service]
+gateway-service ansible_port=22 ansible_host=10.240.232.72 ansible_ssh_private_key_file={{SSH_PRIVATE_KEY_PATH}}
+
+[gateway-service:vars]
+SERVICE_NAME=gateway-service
+SERVICE_PORT=9009

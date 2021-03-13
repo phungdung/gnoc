@@ -1,0 +1,1013 @@
+env.cloud_config_git_uri = "http://10.240.203.2:8180/tranglq/gnoc-config-production"
+
+jenkinsfile_utils = load 'Jenkinsfile_utils.groovy'
+
+def deployToProduction() {
+    def serviceList = []
+    def moduleVersionList = [:]
+    def listModulesRebuild = []
+    def listModulesDeploy = []
+    def listServicesChangedInConfig = []
+    def notServiceModuleList = ["cicd"]
+    def gitlabBranch = env.gitlabBranch
+    def semantic_version = gitlabBranch.split("/")[2].split("\\.")
+    env.cloud_config_git_branch = "v${semantic_version[0]}.${semantic_version[1]}"
+    echo "Cloud config git branch: ${env.cloud_config_git_branch}"
+    env.DEPLOY_RESULT_DESCRIPTION += "<h4>Test & Verify Phase Result</h4>"
+
+    stage("Checkout Source Code") {
+
+        echo "${jenkinsfile_utils}"
+        jenkinsfile_utils.checkout()
+        def commitIdStdOut = sh(script: 'git rev-parse HEAD', returnStdout: true)
+        env.DEPLOY_GIT_COMMIT_ID = commitIdStdOut.trim()
+    }
+    env.DEPLOY_RESULT_DESCRIPTION += "<h4>Deploy Phase Result</h4>"
+
+    stage("Get & check Production ENV") {
+        docker.image(env.GROOVY_IMAGE).inside("-v '${HOME}/.m2:/root/.m2:rw'") {
+            def pomXMLStr = readFile "pom.xml" + ""
+            echo "pomXmlStr: ${pomXMLStr}"
+            dir('cicd/deploy-production/groovy') {
+                sh "pwd"
+                sh "ls -la"
+                sh "groovy GetServerList.groovy \'${pomXMLStr}\'"
+                sh "cat GetServerList.txt"
+                def props = readProperties file: 'GetServerList.txt'
+                echo "Service List: ${props}"
+                serviceList = "${props}".split(",|\\[|\\:|\\]")
+                echo "serviceList: ${serviceList}"
+            }
+            def pom = readMavenPom(file: "pom.xml")
+            env.project_version = pom.getVersion()
+        }
+        loadGitConfig(serviceList, env.cloud_config_git_uri, env.cloud_config_git_branch, "")
+        env.DEPLOY_RESULT_DESCRIPTION += "<h5>- Cloud Config Git Version: ${env.cloud_config_git_branch}</h5>"
+    }
+
+    stage("Get sub modules version") {
+        getSubModuleVersion(serviceList, moduleVersionList)
+    }
+
+    stage("Check for services needed to be deploy") {
+        //Get Token to get last successful deploy info
+        withCredentials([usernamePassword(
+                credentialsId: "${env.OPENSTACK_STAGING_CREDENTIALS}",
+                usernameVariable: 'openstack_username',
+                passwordVariable: 'openstack_password')]) {
+            echo "start check for services needed to deploy"
+            env.openStackAuthToken = getOpenStackAuthToken(
+                    env.openstack_auth_url,
+                    env.openstack_project_name,
+                    env.openstack_user_domain_name,
+                    env.openstack_project_domain_name,
+                    openstack_username,
+                    openstack_password
+            )
+        }
+        def listServiceUpgrade = getListServiceUpgrade(serviceList)
+        echo("listServiceUpgrade: ${listServiceUpgrade}")
+        listModulesRebuild = listServiceUpgrade.getAt(0)
+        listServicesChangedInConfig = listServiceUpgrade.getAt(1)
+        listModulesDeploy = listServiceUpgrade.get(2)
+        if (listModulesRebuild.size() == 0 && listServicesChangedInConfig.size() == 0) {
+            error("Dont have any changes")
+        }
+        echo "List services is going to be rebuild: ${listModulesRebuild}"
+        echo "List services just changed in configuration: ${listServicesChangedInConfig}"
+        echo "listModulesDeploy = ${listModulesDeploy}"
+    }
+
+    def isReloadConfig = false
+    def defaultDeployModule = ['gateway-service']
+    def serviceListToUpgrade = listModulesDeploy + listServicesChangedInConfig
+    serviceListToUpgrade -= defaultDeployModule
+    serviceListToUpgrade += defaultDeployModule
+    if (listModulesDeploy.size() == 0 && listServicesChangedInConfig.size() > 0) isReloadConfig = true
+    withCredentials([file(
+            credentialsId: 'gnoc-production-cloud-config-bootstrap.yml',
+            variable: 'bootstrap_production_config')]) {
+        def currentDir = pwd()
+        sh "cp $bootstrap_production_config ${currentDir}/configuration-service/src/main/resources/bootstrap-production.yml"
+    }
+
+    if (!isReloadConfig) {
+//        jenkinsfile_script.autoTest()
+        sh("chmod +x build.sh")
+        stage("Package Production Service") {
+            for (def service in listModulesDeploy){
+                if (!service.equals("")) {
+                    sh("./build.sh package ${service}")
+                }
+            }
+        }
+
+        stage("Build & Upload Production Service Docker Images") {
+            //Build docker images and push to docker registry
+            env.DEPLOY_RESULT_DESCRIPTION += "<h5>- Docker Image Deployed To Production List:</h5>"
+            env.DEPLOY_RESULT_DESCRIPTION += "<ul style='list-style-type:disc'>"
+            def tasks = [:]
+            for (int i = 0; i < listModulesDeploy.size(); i ++) {
+                def service = listModulesDeploy[i]
+
+                tasks[service] = {
+                    // Package service
+                    echo "${listModulesDeploy}"
+                    echo "service: ${service}"
+                    if (!service.equals("")) {
+                        def service_version
+                        dir(service) {
+                            sh("pwd")
+                            def pom = readMavenPom(file: "pom.xml")
+                            service_version = pom.getVersion()
+                            // Build docker images for service
+                            echo "service: ${service}"
+                            sh """
+                               docker build --build-arg JDK_BASE_IMAGE=${env.production_image_base} \
+                                   --build-arg PROJECT_VERSION=${service_version} \
+                                   -t ${env.docker_push_image_registry_url}/gnoc/${env.docker_repo_name}/${service}:${
+                                service_version
+                            } .
+                                """
+                        }
+                        // Push docker images to docker registry
+                        withDockerRegistry([
+                                credentialsId: 'nexus-repo-credentials',
+                                url          : "http://${env.docker_push_image_registry_url}"]) {
+                            def stagingImage = docker.image("${env.docker_push_image_registry_url}/gnoc/" +
+                                    "${env.docker_repo_name}/${service}:${service_version}")
+                            stagingImage.push()
+                            env.DEPLOY_RESULT_DESCRIPTION += "<li><code>${env.docker_pull_image_registry_url}/gnoc/" +
+                                    "${env.docker_repo_name}/${service}:${service_version}</code></li>"
+                        }
+                    }
+                }
+            }
+            parallel tasks
+            env.DEPLOY_RESULT_DESCRIPTION += "</ul>"
+            docker.image(env.ANSIBLE_CENTOS7_IMAGE).inside("-v '/tmp/facts_cache:/tmp/facts_cache:rw'") {
+                dir("cicd/deploy-production/ansible") {
+                    def currentDir = pwd()
+                    moduleVersionList.remove("commons")
+                    def moduleVersionListStr = jenkinsfile_utils.toJSONString(["map_module_version": moduleVersionList])
+                    def moduleVersionListJSON = readJSON text: moduleVersionListStr
+                    writeJSON file: 'moduleVersionList.json', json: moduleVersionListJSON
+                    sh 'cat moduleVersionList.json'
+                    sh """
+                        ansible-playbook  -i jenkins_localhost.ini deploy_utilities.yml \
+                            --tags "gen-docker-compose-gnoc" \
+                            -e use_production_utils=True \
+                            -e IMAGE_TYPE=${env.docker_repo_name} \
+                            -e IMAGE_REGISTRY_URL=${env.docker_push_image_registry_url} \
+                            -e JDK_BASE_IMAGE=${env.production_image_base} \
+                            -e CURRENT_JENKINS_LOCAL_DIR=${currentDir} \
+                            -e "@moduleVersionList.json"
+                        """
+                    echo "${currentDir}"
+                    sh("ls -al ${currentDir}/../../../deploy/")
+                    sh "cat ${currentDir}/../../../deploy/docker-compose-gnoc.yml"
+                }
+            }
+            // Remove all images in jenkins server
+            sh './build.sh service-stack-down --production'
+        }
+
+//        stage("Generate secret files") {
+//            generateSecretFile()
+//        }
+
+        stage("Deploy services") {
+//            Test ssh vào staging server
+            sshAndDeployServiceTest()
+
+//            ssh vào server thật
+//            sshAndDeployService(moduleVersionList)
+        }
+
+    }
+}
+
+def sshAndDeployService(moduleVersionList){
+    withCredentials([usernamePassword(
+            credentialsId: "production_server",
+            usernameVariable: 'server_username',
+            passwordVariable: 'server_password')]) {
+        // Check kết nối tới server
+        docker.image("10.240.201.50:7890/alpine:telnet").inside() {
+            def exitCode = sh script: "telnet 10.255.58.90 22", returnStatus: true
+            if (exitCode == 0) {
+                echo "connected!"
+            } else {
+                echo "not connected!"
+            }
+//                    sh "traceroute -p 22 10.255.58.90"
+        }
+        echo "${listModulesDeploy}"
+        docker.image(env.ANSIBLE_CENTOS7_IMAGE).inside("-v '/tmp/facts_cache:/tmp/facts_cache:rw'") {
+            dir('cicd/deploy-production/ansible/ultilities') {
+                env.server_working_dir= "/home/gnoc"
+                deployService("configuration-service", moduleVersionList)
+                deployService("discovery-service", moduleVersionList)
+                deployService("hazelcast-service", moduleVersionList)
+                for (def service: listModulesDeploy) {
+                    // Package service
+                    if(!service.equals("configuration-service") &&
+                            !service.equals("discovery-service") &&
+                            !service.equals("hazelcast-service") &&
+                            !service.equals("gateway-service")) {
+                        deployService(service, moduleVersionList)
+                    }
+                }
+                deployService("gateway-service", moduleVersionList)
+            }
+        }
+    }
+
+}
+
+def deployService(service, moduleVersionList) {
+    echo "service: ${service}"
+    def service_version = moduleVersionList[service]
+    def docker_pull_image = "${env.docker_pull_image_registry_url}/gnoc/" +
+            "${env.docker_repo_name}/${service}:${service_version}"
+    if (!service.equals("")) {
+        echo "docker_pull_image: ${docker_pull_image}"
+        echo "service_version: ${service_version}"
+        echo "server_username: ${server_username}"
+        echo "server_password: ${server_password}"
+        sh("pwd")
+        if (service.contains("/")) {
+            service = service.split('/')[1]
+        }
+        sh """
+                                        ansible-playbook -i gnoc_service_list.ini deploy-production.yaml \
+                                        -e USER_PRODUCTION_SERVER=${server_username} \
+                                        -e PASS_PRODUCTION_SERVER=${server_password} \
+                                        -e SERVICE_VERSION=${service_version} \\
+                                        -e DOCKER_PULL_IMAGE_SERVICE=${docker_pull_image} \\
+                                        -e SERVICE_NAME=${service} \\
+                                        -e TIMEOUT_SERVICE_PORT_UP=360 \\
+                                        -e jdk_image_base=${env.production_image_base} \\
+                                        -e CLOUD_CONFIG_URI=${env.cloud_config_uri} \\
+                                        -e CLOUD_CONFIG_GIT_URI=${env.cloud_config_git_uri} \\
+                                        -e service_mem_limit_config=1140 \\
+                                        -e LABEL=${env.gitlabSourceBranch} \\
+                                        -e service_mem_limit_config_init_heap_size=${env.service_mem_limit_config_init_heap_size} \\
+                                        -e service_mem_limit_config_max_heap_size=${env.service_mem_limit_config_max_heap_size} \\
+                                    """
+    }
+}
+
+def sshAndDeployServiceTest(listModulesDeploy){
+//                Test ssh vào staging server
+            withCredentials([sshUserPrivateKey(
+                    credentialsId: "${env.SSH_PRIVATE_KEY_CREDENTIALS}",
+                    keyFileVariable: 'stagingSSHPrivateKeyPath',
+                    usernameVariable: 'stagingSSHUserName'
+            )]) {
+                docker.image(env.ANSIBLE_CENTOS7_IMAGE).inside("-v '/tmp/facts_cache:/tmp/facts_cache:rw'") {
+                    dir('cicd/deploy-production/ansible/ultilities') {
+                        for (def service : listModulesDeploy) {
+                            // Package service
+                            echo "${listModulesDeploy}"
+                            echo "service: ${service}"
+                            if (!service.equals("")) {
+                                def service_version = moduleVersionList[service]
+                                def docker_pull_image = "${env.docker_pull_image_registry_url}/gnoc/" +
+                                        "${env.docker_repo_name}/${service}:${service_version}"
+                                def server_working_dir = "/home/centos"
+                                echo "docker_pull_image: ${docker_pull_image}"
+                                echo "service_version: ${service_version}"
+                                sh("pwd")
+                                sh """
+                                        ansible-playbook -i staging_hosts.ini.j2 deploy-production.yaml \
+                                        -e SSH_USER_NAME=${stagingSSHUserName} \
+                                        -e SSH_PRIVATE_KEY_PATH=${stagingSSHPrivateKeyPath} \
+                                        -e SERVICE_VERSION=${service_version} \
+                                        -e DOCKER_PULL_IMAGE_SERVICE=${docker_pull_image} \
+                                        -e SERVICE_NAME=${service} \
+                                        -e TIMEOUT_SERVICE_PORT_UP=360 \
+                                        -e server_working_dir=${server_working_dir} \
+                                        -e jdk_image_base=${env.production_image_base} \
+                                        -e CLOUD_CONFIG_URI=${env.cloud_config_uri} \
+                                        -e CLOUD_CONFIG_GIT_URI=${env.cloud_config_git_uri} \
+                                        -e service_mem_limit_config=1140 \
+                                        -e LABEL=${env.gitlabSourceBranch} \
+
+                                    """
+                            }
+                        }
+                    }
+
+                }
+            }
+
+}
+def loadGitConfig(serviceList, String cloudConfigGitURI, String branch, String gitConfigCommitID) {
+    sh 'rm -rf git-config'
+    sh 'mkdir git-config'
+    dir('git-config') {
+        checkout changelog: true, poll: true, scm: [
+                $class                           : 'GitSCM',
+                branches                         : [[name: "${branch}"]],
+                doGenerateSubmoduleConfigurations: false,
+                extensions                       : [[$class: 'UserIdentity', email: 'cloud@viettel.com.vn', name: 'cicd_bot']],
+                submoduleCfg                     : [],
+                userRemoteConfigs                : [[credentialsId: 'cicd_bot_gitlab_credential',
+                                                     name         : 'origin',
+                                                     url          : "${cloudConfigGitURI}"]]
+        ]
+
+        def commitIdStdOut = sh(script: 'git rev-parse HEAD', returnStdout: true)
+        env.CLOUD_CONFIG_GIT_COMMIT_ID = commitIdStdOut.trim()
+        echo "cloud config git repo commit id : ${env.CLOUD_CONFIG_GIT_COMMIT_ID}"
+
+        if (gitConfigCommitID != "") {
+            sh "git checkout -b lastGitConfig ${gitConfigCommitID}"
+        }
+
+        // load config
+        def config_working_dir = pwd()
+        sh "ls -al"
+        sh "ls -al deploy-config"
+        sh "cp deploy-config/production-config.yml ../cicd/deploy-production/ansible/production-config.yml"
+
+        // copy service config
+        for (def service: serviceList) {
+            if (!service.equals("") && !service.equals("configuration-service")){
+                if (service.contains("/")) {
+                    service = service.split('/')[1]
+                }
+                echo "service: ${service}"
+                def config_service_copy_file = "../configuration-service/src/main/resources/config/${service}/application.yml"
+                sh "pwd"
+                sh "ls -al ${service}"
+                sh "chmod +x ${config_service_copy_file}"
+                sh "rm ${config_service_copy_file}"
+                sh "cp ${service}/application.yml ${config_service_copy_file}"
+            }
+        }
+        def serviceConfig = readYaml file: "deploy-config/production-config.yml"
+        echo "service Config: ${serviceConfig}"
+        env.openstack_auth_url = serviceConfig["openstack_auth_url"]
+        env.openstack_nova_api_url = serviceConfig["openstack_nova_api_url"]
+        env.openstack_user_domain_name = serviceConfig["openstack_user_domain_name"]
+        env.openstack_project_domain_name = serviceConfig["openstack_project_domain_name"]
+        env.openstack_project_name = serviceConfig["openstack_project_name"]
+        env.docker_repo_name = serviceConfig["docker_repo_name"]
+        env.docker_push_image_registry_url = serviceConfig["docker_push_image_registry_url"]
+        env.docker_pull_image_registry_url = serviceConfig["docker_pull_image_registry_url"]
+        env.production_image_base = serviceConfig["production_image_base"]
+        env.private_management_network_name = serviceConfig["private_management_network_name"]
+        env.vsmart_heat_stack_name = serviceConfig['stack_name']
+        env.openstack_aodh_api_url = serviceConfig['openstack_aodh_api_url']
+        env.openstack_project_id = serviceConfig['openstack_project_id']
+        env.pre_production_ip = serviceConfig['pre_production_ip']
+        env.pre_production_hompage_port = serviceConfig['pre_production_hompage_port']
+        env.project_maintainer_list = serviceConfig['project_maintainer_list']
+        env.stop_autoscaling_timeout = serviceConfig['stop_autoscaling_timeout']
+        env.service_port_list = serviceConfig['SERVICE_PORT_LIST']
+        env.cloud_config_uri = serviceConfig['cloud_config_uri']
+        env.cloud_config_git_uri = serviceConfig['cloud_config_git_uri']
+        env.service_mem_limit_config_init_heap_size = serviceConfig['service_mem_limit_config']['init_heap_size']
+        env.service_mem_limit_config_max_heap_size = serviceConfig['service_mem_limit_config']['max_heap_size']
+    }
+    def commitIdStdOut = sh(script: 'git rev-parse HEAD', returnStdout: true)
+    env.GIT_COMMIT_ID = commitIdStdOut.trim()
+    echo "git source code commit id : ${env.GIT_COMMIT_ID}"
+}
+
+def getSubModuleVersion(serviceList, moduleVersionList) {
+    sh 'ls -la'
+    def tasks = [:]
+    for (int i = 0; i < serviceList.size(); i ++) {
+        def service = serviceList[i]
+        tasks[service] = {
+            if (!service.equals("")) {
+                echo "${service}"
+                dir(service) {
+                    sh "pwd"
+                    sh "ls -al"
+                    def service_pom = readMavenPom(file: "pom.xml")
+                    def service_version = service_pom.getVersion()
+                    echo "service_version: ${service_version}"
+                    moduleVersionList[service] = service_version
+                }
+            }
+        }
+    }
+    parallel tasks
+
+
+
+    echo "Module and it's version: ${moduleVersionList}"
+    env.DEPLOY_RESULT_DESCRIPTION += "<h5>- Project Version: ${env.project_version} - commitID: ${env.GIT_COMMIT_ID}</h5>"
+    env.DEPLOY_RESULT_DESCRIPTION += "<h5>- Project Service List:</h5>"
+    env.DEPLOY_RESULT_DESCRIPTION += "<ul style='list-style-type:disc'>"
+    for (serviceName in serviceList) {
+        env.DEPLOY_RESULT_DESCRIPTION += "<li>${serviceName}: version ${moduleVersionList[serviceName]}</li>"
+    }
+    env.DEPLOY_RESULT_DESCRIPTION += "</ul>"
+}
+
+def genImportantFileAndDeploy(moduleVersionList, serviceList) {
+    dir('cicd/deploy-production/ansible') {
+        moduleVersionList.remove('commons')
+        def moduleVersionListStr = jenkinsfile_utils.toJSONString(["map_module_version": moduleVersionList])
+        def moduleVersionListJSON = readJSON text: moduleVersionListStr
+        writeJSON file: 'moduleVersionList.json', json: moduleVersionListJSON
+        sh 'cat moduleVersionList.json'
+    }
+
+    stage("Generate Heat Template") {
+        generateHeatStackTemplate(serviceList)
+    }
+}
+
+def getListServiceUpgrade(serviceList) {
+    def listServicesChangedInConfig = []
+    def listModulesRebuild = []
+    def listModulesDeploy = []
+    def lastSuccessfulDeploymentInfo = getLastSuccessDeploymentInfo()
+    echo "lastSuccessfulDeploymentInfo: ${lastSuccessDeploymentInfo}"
+    def lastDeployGitCommitId = null
+    def lastCloudConfigGitCommitId = null
+    if (lastSuccessDeploymentInfo != null) {
+        lastDeployGitCommitId = lastSuccessfulDeploymentInfo.get("latest-deploy-git-commit-id")
+        lastCloudConfigGitCommitId = lastSuccessfulDeploymentInfo.get("latest-cloud-config-git-commit-id")
+    }
+    def listModulesChangedInCode = []
+
+
+    if (lastSuccessfulDeploymentInfo == null || lastDeployGitCommitId == null || lastCloudConfigGitCommitId == null) {
+        listModulesChangedInCode = serviceList.clone()
+        listModulesChangedInCode += ["commons"]
+        echo "listModulesChangedInCode: ${listModulesChangedInCode}"
+    } else {
+        // Get list file changed in vsmart-cloud-repos
+        def fileChangedArray = sh(script: "git diff --name-only ${lastDeployGitCommitId} ${env.DEPLOY_GIT_COMMIT_ID}", returnStdout: true).split('\n')
+        def listFileChanged = toList(fileChangedArray)
+        echo "List file change: \n${listFileChanged}"
+        def listFileChangedNotInPom = []
+        def isCommonsChangedInCode = false
+        // Get list modules changed in code
+        for (def fileChanged : listFileChanged) {
+            if (!fileChanged.endsWith("pom.xml")) {
+                def module = fileChanged.split('/')[0]
+                if (((module.endsWith("service")) || (module.endsWith("server")) )&& !listModulesChangedInCode.contains(module)) {
+                    listModulesChangedInCode.add(module)
+                }
+                if (module == "commons") isCommonsChangedInCode = true
+                listFileChangedNotInPom.add(fileChanged)
+            }
+        }
+        //Deploy every service when commons changed in code
+        if (isCommonsChangedInCode) {
+            listModulesChangedInCode = serviceList.clone()
+            listModulesChangedInCode.add("commons")
+        }
+        def listFileChangedInPOM = listFileChanged - listFileChangedNotInPom
+        echo "List file changed in POM: ${listFileChangedInPOM}"
+        echo "Module changed in code: ${listModulesChangedInCode}"
+
+        //Verify that Maintainer bump version in the good way
+        echo "Start verify maintainer has bumped versions in the good way"
+
+        //Verify bump commons version right way
+        if (listFileChangedInPOM.contains("commons/pom.xml")) {
+            dir("commons") {
+                def isBumpCommonsTheRightWay = false
+                sh "git show ${lastDeployGitCommitId}:./pom.xml > pom2.xml"
+                def pom = readMavenPom([file: "pom.xml"])
+                def lastPom = readMavenPom([file: "pom2.xml"])
+                def lastVersion = lastPom.getVersion()
+                def version = pom.getVersion()
+                def dependencies = pom.getDependencies().toString()
+                def lastDependencies = lastPom.getDependencies().toString()
+                def differences = dependencies - lastDependencies
+                def reverseDifferences = lastDependencies - dependencies
+                //Cases that bump commons version in the right way
+                if (listModulesChangedInCode.contains("commons")) {
+                    if (lastVersion != version) isBumpCommonsTheRightWay = true
+                } else if (lastVersion != version && (differences.size() != 0 || reverseDifferences.size() != 0))
+                    isBumpCommonsTheRightWay = true
+                if (isBumpCommonsTheRightWay) {
+                    listModulesChangedInCode = serviceList.clone()
+                    listModulesChangedInCode.add("commons")
+                }
+                //Other
+                else error("Error when bump version in service commons")
+            }
+        }
+        echo "listFileChangedInPOM: ${listFileChangedInPOM}"
+        echo "listModulesChangedInCode: ${listModulesChangedInCode}"
+
+        //Code change but pom.xml not changed
+        for (def module : listModulesChangedInCode) {
+            String pomFile = "${module}/pom.xml"
+            if (!listFileChangedInPOM.contains(pomFile))
+                error("Error: maintainer must bump version in ${module}.")
+        }
+
+        //Verify bump other service the right way
+        for (def str : listFileChangedInPOM) {
+            if (str.endsWith("pom.xml") && str != "pom.xml" && str.indexOf("cicd") == -1 && str.indexOf("commons") == -1) {
+                def isBumpServiceTheRightWay = false
+                String service = str.split('/')[0]
+                dir(service) {
+                    sh "git show ${lastDeployGitCommitId}:./pom.xml > pom2.xml"
+                    def pom = readMavenPom([file: "pom.xml"])
+                    def lastPom = readMavenPom([file: "pom2.xml"])
+                    def lastVersion = lastPom.getVersion()
+                    def version = pom.getVersion()
+                    def dependencies = pom.getDependencies().toString()
+                    def lastDependencies = lastPom.getDependencies().toString()
+                    def differences = dependencies - lastDependencies
+                    def reverseDifferences = lastDependencies - dependencies
+                    //Cases that bump service version in the right way
+                    if (listModulesChangedInCode.contains(service)) {
+                        if (lastVersion != version) isBumpServiceTheRightWay = true
+                    } else if (lastVersion != version && (differences.size() != 0 || reverseDifferences.size() != 0))
+                        isBumpServiceTheRightWay = true
+                    if (!listModulesChangedInCode.contains(service)) listModulesChangedInCode.add(service)
+                    //Other
+                    if (!isBumpServiceTheRightWay) error("Error when bump version in ${service}")
+                }
+            }
+        }
+    }
+    echo "List modules changed in code: ${listModulesChangedInCode}"
+
+// Get list file change in vsmart-cloud-config-repos
+    echo "Last Cloud config Git CM ID: ${lastCloudConfigGitCommitId}"
+    if (lastCloudConfigGitCommitId != null) {
+        dir('git-config') {
+            echo "latest cloud config: ${lastCloudConfigGitCommitId}"
+            echo "current cloud config: ${env.CLOUD_CONFIG_GIT_COMMIT_ID}"
+            def listConfigFileChanged = sh(script: "git diff --name-only ${lastCloudConfigGitCommitId} ${env.CLOUD_CONFIG_GIT_COMMIT_ID}", returnStdout: true).split('\n')
+            echo "${listConfigFileChanged}"
+            for (def str : listConfigFileChanged) {
+                def service = str.split('/')[0]
+                if (((module.endsWith("service")) || (module.endsWith("server")) )&& !listServicesChangedInConfig.contains(service)) {
+                    echo "${service}"
+                    listServicesChangedInConfig.add(service)
+                }
+            }
+            echo "List services changed in cloud config: ${listServicesChangedInConfig}"
+        }
+        sh 'rm -rf git-config'
+    }
+
+// Get list services to be deployed
+    echo "listModulesChangedInCode: ${listModulesChangedInCode}"
+    listModulesRebuild = listModulesChangedInCode
+    echo "listModulesRebuild: ${listModulesRebuild}"
+    def listRemoved = []
+    for (def i = 0; i < listServicesChangedInConfig.size(); i++) {
+        if (listModulesRebuild.contains(listServicesChangedInConfig.getAt(i)))
+            listRemoved.add(listServicesChangedInConfig.getAt(i))
+    }
+    listServicesChangedInConfig -= listRemoved
+    listModulesDeploy = listModulesRebuild - ['commons']
+    return [listModulesRebuild, listServicesChangedInConfig, listModulesDeploy]
+}
+
+def getOpenStackAuthToken(auth_url, project_name, domain_name, project_domain_name, username, password) {
+    def authBody = """
+        { "auth": {
+            "identity": {
+              "methods": ["password"],
+              "password": {
+                "user": {
+                  "name": "${username}",
+                  "domain": { "id": "${domain_name}" },
+                  "password": "${password}"
+                }
+              }
+            },
+            "scope": {
+              "project": {
+                "name": "${project_name}",
+                "domain": { "id": "${project_domain_name}" }
+              }
+            }
+          }
+        }
+    """
+    echo "authBody: ${authBody}"
+    def tokenResp = httpRequest([
+            acceptType : 'APPLICATION_JSON',
+            httpMode   : 'POST',
+            contentType: 'APPLICATION_JSON',
+            url        : "${auth_url}/auth/tokens",
+            requestBody: authBody
+    ])
+
+    echo "tokenResp: ${tokenResp}"
+    return tokenResp.headers['X-Subject-Token'][0]
+}
+
+def getLastSuccessDeploymentInfo() {
+    def latestCloudConfigGitCommitId = null
+    def latestDeployGitCommitId = null
+    def configurationServers = getProjectServerList(
+            env.openstack_nova_api_url, env.openStackAuthToken, "configuration-service")
+    def i = 0
+    echo "configuration server list: ${configurationServers}"
+    while (i < configurationServers.size() && latestCloudConfigGitCommitId == null) {
+        def configurationServerInfo = httpRequest([
+                acceptType   : 'APPLICATION_JSON',
+                httpMode     : 'GET',
+                quiet        : true,
+                contentType  : 'APPLICATION_JSON',
+                customHeaders: [[name: "X-Auth-Token", value: "${env.openStackAuthToken}"],
+                                [name: "OpenStack-API-Version", value: "compute 2.60"],
+                                [name: "User-Agent", value: "python-novaclient"],
+                                [name: "X-OpenStack-Nova-API-Version", value: "2.60"]],
+                url          : "${env.openstack_nova_api_url}/servers/${configurationServers[i]["id"]}",
+        ])
+        echo "info: ${configurationServerInfo.content}"
+        def latestCloudConfigGitCommitIdParse = groovy.json.JsonSlurperClassic().parseText(
+                configurationServerInfo.content)
+        echo "latestCloudConfigGitCommitIdParse: ${latestCloudConfigGitCommitIdParse}"
+        latestCloudConfigGitCommitId = latestCloudConfigGitCommitIdParse["server"]["metadata"]["latest-cloud-config-git-commit-id"]
+        latestDeployGitCommitId = latestCloudConfigGitCommitIdParse["server"]["metadata"]["latest-deploy-git-commit-id"]
+        echo "latest Deploy Git CommitId: ${latestDeployGitCommitId}"
+        i += 1
+    }
+    echo "latest CloudConfig Git CommitId: ${latestCloudConfigGitCommitId}"
+    echo "latest Deploy Git CommitId: ${latestDeployGitCommitId}"
+    return ["latest-cloud-config-git-commit-id": latestCloudConfigGitCommitId, "latest-deploy-git-commit-id": latestDeployGitCommitId]
+}
+
+def getProjectServerList(nova_api_url, auth_token) {
+    def serverListResp = httpRequest([
+            acceptType   : 'APPLICATION_JSON',
+            httpMode     : 'GET',
+            contentType  : 'APPLICATION_JSON',
+            customHeaders: [[name: "X-Auth-Token", value: "${auth_token}"],
+                            [name: "OpenStack-API-Version", value: "compute 2.60"],
+                            [name: "User-Agent", value: "python-novaclient"],
+                            [name: "X-OpenStack-Nova-API-Version", value: "2.60"]],
+            url          : "${nova_api_url}/servers?tags=vsmart"
+    ])
+    return jenkinsfile_utils.jsonParse(serverListResp.content)["servers"]
+}
+
+def generateSecretFile() {
+    withCredentials([
+            usernamePassword(
+                    credentialsId: "${env.OPENSTACK_STAGING_CREDENTIALS}",
+                    usernameVariable: 'production_openstack_username',
+                    passwordVariable: 'production_openstack_password')
+    ]) {
+        docker.image(env.ANSIBLE_CENTOS7_IMAGE).inside("-v '/tmp/facts_cache:/tmp/facts_cache:rw'") {
+            dir('cicd/deploy-production/ansible') {
+                def currentDir = pwd()
+                sh """
+                            ansible-playbook -i jenkins_localhost.ini deploy_utilities.yml \
+                                --tags "gen-secret-env-file" \
+                                -e use_production_utils=True \
+                                -e CURRENT_JENKINS_LOCAL_DIR=${currentDir} \
+                                -e openstack_username=${production_openstack_username}  \
+                                -e openstack_password=${production_openstack_password}  \
+                                -e SERVICE_NAME=${}
+                """
+//                                -e production_vm_username=${production_vm_username}  \
+//                                -e production_vm_password=${production_vm_password}
+//                            """
+                sh 'cat group_vars/all/secret.yml'
+            }
+        }
+    }
+}
+
+def getProjectServerList(nova_api_url, auth_token, serviceName) {
+    def serverListResp = httpRequest([
+            acceptType   : 'APPLICATION_JSON',
+            httpMode     : 'GET',
+            contentType  : 'APPLICATION_JSON',
+            customHeaders: [[name: "X-Auth-Token", value: "${auth_token}"],
+                            [name: "OpenStack-API-Version", value: "compute 2.60"],
+                            [name: "User-Agent", value: "python-novaclient"],
+                            [name: "X-OpenStack-Nova-API-Version", value: "2.60"]],
+            url          : "${nova_api_url}/servers?tags=${serviceName}"
+    ])
+    def projectServerListParse = new groovy.json.JsonSlurperClassic().parseText(serverListResp.content)
+    def projectServerList = projectServerListParse["servers"]
+    return projectServerList
+}
+
+def generateHeatStackTemplate(serviceList) {
+    docker.image(env.ANSIBLE_CENTOS7_IMAGE).inside("-v '/tmp/facts_cache:/tmp/facts_cache:rw'") {
+        dir('cicd/deploy-production/ansible') {
+            def gnocServiceList = jenkinsfile_utils.toJSONString(
+                    ["SERVICE_LIST": serviceList])
+            echo "${gnocServiceList}"
+            def gnocServiceListJSON = readJSON text: gnocServiceList
+            writeJSON file: 'gnoc_service_list.json', json: gnocServiceListJSON
+            sh 'cat production-config.yml'
+            sh 'cat gnoc_service_list.json'
+            def currentDir = pwd()
+            sh """
+                    ansible-playbook -i jenkins_localhost.ini deploy_utilities.yml \
+                        --tags "gen-heat-stack-template" \
+                        -e "use_production_utils=True" \
+                        -e "@moduleVersionList.json" \
+                        -e "CURRENT_JENKINS_LOCAL_DIR=${currentDir}" \
+                        -e "@production-config.yml" \
+                        -e "@gnoc_service_list.json"
+                        
+                    cat gnoc_heat_template.yaml
+                    cp gnoc_heat_template.yaml  ${currentDir}/../heat-stack/
+                """
+        }
+    }
+}
+
+def gitTagCommitId(name) {
+    msg = sh(script: "git rev-list -n 1 ${name}", returnStdout: true)?.trim()
+    if (msg) {
+        echo "${msg}"
+        return msg
+    }
+    return null
+}
+
+def rollBackTag() {
+    def gitTag = ''
+    def serviceList = []
+    env.DEPLOY_RESULT_DESCRIPTION += "<h4>Test & Verify Phase Result</h4>"
+    stage('Wait for user submit Tag to rollback') {
+        try {
+            timeout(time: 24, unit: 'HOURS') {
+                gitTag = input(
+                        submitter: "${env.ROLLBACK_MAINTAINER_LIST}",
+                        message: 'Pause for wait maintainer selection', ok: "Rollback", parameters: [
+                        string(defaultValue: '',
+                                description: 'Tag to rollback',
+                                name: 'Tag')
+                ])
+            }
+        } catch (err) {
+            echo "Exception"
+            def user = err.getCauses()[0].getUser()
+            if ('SYSTEM' == user.toString()) { // SYSTEM means timeout.
+                echo "Timeout is exceeded!"
+            } else {
+                echo "Aborted by: [${user}]"
+            }
+            gitTag = 'Aborted'
+        }
+    }
+    def statusCode = sh(script: "git show-ref --verify refs/tags/${gitTag}", returnStatus: true)
+    env.GIT_TAG_ROLLBACK = gitTag
+    if (gitTag == 'Aborted' || gitTag == '') {
+        stage("Cancel deploy process") {
+            echo "Deploy process is canceled."
+            currentBuild.result = "ABORTED"
+        }
+    } else {
+        if (statusCode == 0) {
+            def moduleVersionList = [:]
+            def tagCommitId = gitTagCommitId(gitTag)
+            echo "gitTagCommitId: ${tagCommitId}"
+
+            stage("Checkout Source Code") {
+                sh "ls -la"
+                sh "git checkout ${tagCommitId}"
+                sh "ls -la"
+                def commitIdStdOut = sh(script: 'git rev-parse HEAD', returnStdout: true)
+                env.DEPLOY_GIT_COMMIT_ID = commitIdStdOut.trim()
+            }
+            env.DEPLOY_RESULT_DESCRIPTION += "<h4>Deploy Phase Result</h4>"
+            stage("Get & check Production ENV") {
+                docker.image(env.GROOVY_IMAGE).inside("-v '${HOME}/.m2:/root/.m2:rw'") {
+                    def pomXMLStr = readFile "pom.xml" + ""
+                    echo "pomXmlStr: ${pomXMLStr}"
+                    def semantic_version = gitTag.split("\\.")
+                    env.cloud_config_git_branch = "v${semantic_version[0]}.${semantic_version[1]}"
+                    echo("Cloud config git branch: ${env.cloud_config_git_branch}")
+                    dir('cicd/deploy-production/groovy') {
+                        sh "pwd"
+                        sh "ls -la"
+                        sh "groovy GetServerList.groovy \'${pomXMLStr}\'"
+                        sh "cat GetServerList.txt"
+                        def props = readProperties file: 'GetServerList.txt'
+                        echo "Service List: ${props}"
+                        serviceList = "${props}".split(",|\\[|\\:|\\]")
+                        echo "serviceList: ${serviceList}"
+                    }
+                    def pom = readMavenPom(file: "pom.xml")
+                    echo "mavenpom: ${pom}"
+                    env.project_version = pom.getVersion()
+                }
+                loadGitConfig(serviceList, env.cloud_config_git_uri, env.cloud_config_git_branch, "")
+                env.DEPLOY_RESULT_DESCRIPTION += "<h5>- Cloud Config Git Version: ${env.cloud_config_git_branch}</h5>"
+            }
+
+            stage("Get sub modules version") {
+                getSubModuleVersion(serviceList, moduleVersionList)
+            }
+
+                echo "env.gitlabSourceBranch: ${env.gitlabSourceBranch}"
+                checkout changelog: true, poll: true, scm: [
+                        $class                           : 'GitSCM',
+                        branches                         : [[name: "master"]],
+                        doGenerateSubmoduleConfigurations: false,
+                        extensions                       : [[$class: 'UserIdentity', email: 'cloud@viettel.com.vn', name: 'cloud']],
+                        submoduleCfg                     : [],
+                        userRemoteConfigs                : [[credentialsId: 'cicd_bot_gitlab_credential',
+                                                             name         : 'origin',
+                                                             url          : "http://10.240.203.2:8180/spqtnv/gnoc/service-backend"]]
+                ]
+                checkConnectionAndRollBack(serviceList, moduleVersionList)
+//                checkConnectionAndRollBackTest(serviceList, moduleVersionList)
+
+//            try {
+//                genImportantFileAndDeploy(moduleVersionList, serviceList)
+//            } catch (err) {
+//                echo "Error: ${err.toString()}. Rollback to latest version!"
+//                env.DEPLOY_RESULT_DESCRIPTION += "<h4>Error Occur when RollBack Service. Rollback to latest success version</h4>"
+//                rollBackDeployServers(serviceList)
+//                error "Rollback to tag ${gitTag} Failed."
+//            } finally {
+//                stage("Resume Stack AutoScaling") {
+//                    resumeHeatStackAutoScaling()
+//                }
+//            }
+        } else error("Invalid git tag ${gitTag}")
+    }
+}
+
+def checkConnectionAndRollBack(serviceList, moduleVersionList){
+    withCredentials([usernamePassword(
+            credentialsId: "production_server",
+            usernameVariable: 'server_username',
+            passwordVariable: 'server_password')]) {
+        // Check kết nối tới server
+        docker.image(env.ANSIBLE_CENTOS7_IMAGE).inside("-v '/tmp/facts_cache:/tmp/facts_cache:rw'") {
+            env.current_jenkins_local_dir = pwd()
+
+            stage("Check version and rollback configuration-service") {
+                checkVersionAndRollBackService("configuration-service", moduleVersionList["configuration-service"], server_username, server_password)
+            }
+            stage("Check version and rollback discovery-service") {
+                checkVersionAndRollBackService("discovery-service", moduleVersionList["discovery-service"], server_username, server_password)
+            }
+            stage("Check version and rollback hazelcast-service") {
+                checkVersionAndRollBackService("hazelcast-service", moduleVersionList["hazelcast-service"], server_username, server_password)
+            }
+
+            stage("Check version and rollback others") {
+                def tasks = [:]
+                for (int i = 0; i < serviceList.size(); i++) {
+                    def service = serviceList[i]
+                    if (!service.equals("") &&
+                            !service.equals("configuration-service") &&
+                            !service.equals("discovery-service") &&
+                            !service.equals("hazelcast-service") &&
+                            !service.equals("gateway-service")) {
+                        tasks[service] = {
+                            checkVersionAndRollBackService(service, moduleVersionList[service], server_username, server_password)
+                        }
+                    }
+                }
+                parallel tasks
+
+            }
+
+            stage("Check version and rollback gateway-service") {
+                checkVersionAndRollBackService("gateway-service", moduleVersionList["gateway-service"], server_username, server_password)
+            }
+
+
+        }
+    }
+}
+
+def checkConnectionAndRollBackTest(serviceList, moduleVersionList){
+    withCredentials([sshUserPrivateKey(
+            credentialsId: "${env.SSH_PRIVATE_KEY_CREDENTIALS}",
+            keyFileVariable: 'stagingSSHPrivateKeyPath',
+            usernameVariable: 'stagingSSHUserName'
+    )]) {
+        docker.image(env.ANSIBLE_CENTOS7_IMAGE).inside("-v '/tmp/facts_cache:/tmp/facts_cache:rw'") {
+            env.current_jenkins_local_dir = pwd()
+
+            stage("Check version and rollback configuration-service") {
+                checkVersionAndRollBackServiceTest("configuration-service", moduleVersionList["configuration-service"], stagingSSHUserName, stagingSSHPrivateKeyPath)
+            }
+            stage("Check version and rollback discovery-service") {
+                checkVersionAndRollBackServiceTest("discovery-service", moduleVersionList["discovery-service"], stagingSSHUserName, stagingSSHPrivateKeyPath)
+            }
+//            stage("Check version and rollback hazelcast-service") {
+//                checkVersionAndRollBackServiceTest("hazelcast-service", moduleVersionList["hazelcast-service"], stagingSSHUserName, stagingSSHPrivateKeyPath)
+//            }
+
+            stage("Check version and rollback others") {
+                def tasks = [:]
+                for (int i = 0; i < serviceList.size(); i++) {
+                    def service = serviceList[i]
+                    if (!service.equals("") &&
+                            !service.equals("configuration-service") &&
+                            !service.equals("discovery-service") &&
+                            !service.equals("hazelcast-service") &&
+                            !service.equals("gateway-service")) {
+                        tasks[service] = {
+
+                                checkVersionAndRollBackServiceTest(service, moduleVersionList[service], stagingSSHUserName, stagingSSHPrivateKeyPath)
+                        }
+                    }
+                }
+                parallel tasks
+
+            }
+
+            stage("Check version and rollback gateway-service") { checkVersionAndRollBackServiceTest("gateway-service", moduleVersionList["gateway-service"], stagingSSHUserName,stagingSSHPrivateKeyPath)}
+
+
+        }
+    }
+}
+
+def checkVersionAndRollBackService(service, service_version, server_username, server_password){
+    def docker_pull_image = "${env.docker_pull_image_registry_url}/gnoc/" +
+            "${env.docker_repo_name}/${service}:${service_version}"
+    if (!service.equals("")) {
+        echo "docker_pull_image: ${docker_pull_image}"
+        echo "service_version: ${service_version}"
+        echo "server_username: ${server_username}"
+        echo "server_password: ${server_password}"
+        sh("pwd")
+        sh("ls -al")
+
+        if (service.contains("/")) {
+            service = service.split('/')[1]
+        }
+        dir('cicd/deploy-production/ansible/ultilities/') {
+
+            sh """
+                                        ansible-playbook -i gnoc_service_list.ini rollback-production.yaml \
+                                        -e USER_PRODUCTION_SERVER=${server_username} \
+                                        -e PASS_PRODUCTION_SERVER=${server_password} \
+                                        -e SERVICE_VERSION=${service_version} \
+                                        -e DOCKER_PULL_IMAGE_SERVICE=${docker_pull_image} \
+                                        -e SERVICE_NAME=${service} \
+                                        -e TIMEOUT_SERVICE_PORT_UP=360 \
+                                        -e current_jenkins_local_dir=${env.current_jenkins_local_dir} \
+                                        -e server_working_dir=${env.server_working_dir} \
+                                        -e jdk_image_base=${env.production_image_base} \
+                                        -e CLOUD_CONFIG_URI=${env.cloud_config_uri} \
+                                        -e CLOUD_CONFIG_GIT_URI=${env.cloud_config_git_uri} \
+                                        -e service_mem_limit_config=1140 \
+                                        -e LABEL=${env.gitlabSourceBranch} \
+                                        -e service_mem_limit_config_init_heap_size=${env.service_mem_limit_config_init_heap_size} \
+                                        -e service_mem_limit_config_max_heap_size=${env.service_mem_limit_config_max_heap_size} \
+                                    """
+        }
+    }
+}
+
+def checkVersionAndRollBackServiceTest(service, service_version, stagingSSHUserName,stagingSSHPrivateKeyPath){
+    def docker_pull_image = "${env.docker_pull_image_registry_url}/gnoc/" +
+            "${env.docker_repo_name}/${service}:${service_version}"
+    if (!service.equals("")) {
+        echo "docker_pull_image: ${docker_pull_image}"
+        echo "service_version: ${service_version}"
+        echo "stagingSSHUserName: ${stagingSSHUserName}"
+        echo "stagingSSHPrivateKeyPath: ${stagingSSHPrivateKeyPath}"
+        env.server_working_dir = "/home/centos"
+        if (service.contains("/")) {
+            service = service.split('/')[1]
+        }
+        sh "ls -al"
+        sh "pwd"
+        dir('cicd/deploy-production/ansible/ultilities/') {
+            sh "ls -al"
+            sh """
+                                        ansible-playbook -i staging_hosts.ini.j2 rollback-production.yaml \
+                                        -e SSH_USER_NAME=${stagingSSHUserName} \
+                                        -e SSH_PRIVATE_KEY_PATH=${stagingSSHPrivateKeyPath} \
+                                        -e SERVICE_VERSION=${service_version} \
+                                        -e DOCKER_PULL_IMAGE_SERVICE=${docker_pull_image} \
+                                        -e SERVICE_NAME=${service} \
+                                        -e TIMEOUT_SERVICE_PORT_UP=360 \
+                                        -e current_jenkins_local_dir=${env.current_jenkins_local_dir} \
+                                        -e server_working_dir=${env.server_working_dir} \
+                                        -e jdk_image_base=${env.production_image_base} \
+                                        -e CLOUD_CONFIG_URI=${env.cloud_config_uri} \
+                                        -e CLOUD_CONFIG_GIT_URI=${env.cloud_config_git_uri} \
+                                        -e service_mem_limit_config=1140 \
+                                        -e LABEL=${env.gitlabSourceBranch} \
+                                        -e service_mem_limit_config_init_heap_size=${env.service_mem_limit_config_init_heap_size} \
+                                        -e service_mem_limit_config_max_heap_size=${env.service_mem_limit_config_max_heap_size} \
+                                    """
+        }
+    }
+}
+
+return [
+        deployToProduction: this.&deployToProduction,
+        rollBackTag:        this.&rollBackTag
+]

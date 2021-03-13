@@ -1,0 +1,69 @@
+WITH temp_data AS
+  (SELECT NVL(c.MARKET_CODE,a.MARKET_CODE) MARKET_CODE,
+    NVL(c.OBJECT_ID,a.DEVICE_ID) OBJECT_ID,
+    a.ARRAY_CODE ,
+    a.DEVICE_TYPE ,
+    a.DEVICE_ID ,
+    a.DEVICE_CODE ,
+    a.DEVICE_NAME ,
+    b.MR_CONTENT_ID ,
+    b.MR_TYPE ,
+    a.MR_ID ,
+    mr.mr_code ,
+    mr.state ,
+    b.PROCEDURE_ID ,
+    b.PROCEDURE_NAME ,
+    a.NOTE ,
+    c.LEVEL_IMPORTANT ,
+    a.REGION ,
+    a.CR_ID ,
+    b.CYCLE ,
+    a.SCHEDULE_ID ,
+    CASE
+      WHEN cr.change_date IS NULL
+      THEN TO_CHAR(a.LAST_DATE, 'dd/MM/yyyy')
+      ELSE TO_CHAR(cr.change_date, 'dd/MM/yyyy')
+    END mr_date
+  FROM MR_SCHEDULE_IT a
+  LEFT JOIN MR mr
+  ON a.MR_ID = mr.MR_ID
+  LEFT JOIN MR_CFG_PROCEDURE_IT_SOFT b
+  ON a.PROCEDURE_ID = b.PROCEDURE_ID
+  LEFT JOIN MR_SYN_IT_DEVICES c
+  ON a.MARKET_CODE  = c.MARKET_CODE
+  AND a.DEVICE_TYPE = c.DEVICE_TYPE
+  AND a.DEVICE_ID   = c.OBJECT_ID
+  LEFT JOIN
+    (SELECT MIN(his.change_date) change_date,
+      cr.cr_id
+    FROM cr cr
+    LEFT JOIN cr_his his
+    ON his.cr_id     = cr.cr_id
+    WHERE his.status =9
+    AND cr.state     =9
+    GROUP BY cr.cr_id
+    ) cr ON cr.cr_id = a.cr_id
+  )
+SELECT a.MARKET_CODE marketCode ,
+  a.OBJECT_ID objectId,
+  a.ARRAY_CODE arrayCode,
+  a.DEVICE_TYPE deviceType,
+  a.DEVICE_ID deviceId,
+  a.DEVICE_CODE deviceCode,
+  a.DEVICE_NAME deviceName,
+  a.MR_CONTENT_ID mrContent,
+  a.MR_TYPE mrType,
+  a.MR_ID mrId,
+  a.mr_code mrCode,
+  a.state mrState,
+  a.PROCEDURE_ID procedureId,
+  a.PROCEDURE_NAME procedureName,
+  a.NOTE note,
+  a.LEVEL_IMPORTANT importantLevel,
+  a.REGION region,
+  a.CR_ID crId,
+  a.CYCLE cycle,
+  a.SCHEDULE_ID scheduleId,
+  a.mr_date mrDate
+FROM temp_data a
+WHERE 1=1

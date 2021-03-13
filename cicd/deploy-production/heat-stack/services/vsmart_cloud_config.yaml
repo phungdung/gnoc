@@ -1,0 +1,143 @@
+heat_template_version: queens
+description: Vsmart Cloud Config service Template
+parameters:
+  image:
+    type: string
+    description: Image used for servers
+  flavor:
+    type: string
+    description: flavor used by the servers
+  key_name:
+    type: string
+    description: Name of keypair to assign to servers
+  metadata:
+    type: json
+    description: Nova server service metadata (service_name)
+  network:
+    type: string
+    description: Network used by the server
+  subnet:
+    type: string
+    description: Subnet used by the server
+  security_group:
+    type: string
+    description: security_group which will be apply for this service
+  service_name:
+    type: string
+    description: vsmart service name
+  service_version:
+    type: string
+  service_docker_image_repo:
+    type: string
+    description: >-
+      docker image_repo for service which will run in this server, include service
+      image name and version
+  service_log_volume:
+    type: string
+    description: >-
+      docker volume contains service logs
+  elastic_search_ip:
+    type: string
+    description: elastic search ip
+  jaeger_collector_url:
+    type: string
+    description: jaeger_collector_url wit ip and port
+  working_dir:
+    type: string
+    description: VM working directory
+  cloud_config_uri:
+    type: string
+    description: Cloud config URI Address
+  cloud_config_commit_id:
+    type: string
+    description: Cloud config commit id used for this deploy
+  active_profile:
+    type: string
+    description: Service active profile config
+  service_port:
+    type: number
+    description: fixed port of gateway service
+# cloud config specific param
+  private_lb_pool_id:
+    type: string
+    description: Pool id of public Load balancer connect to  gateway service
+  cloud_config_git_uri:
+    type: string
+    description: Uri of git repository which cloudconfig service connect with
+# gateway specific param
+  public_lb_pool_id:
+    type: string
+    description: Pool id of public Load balancer connect to  gateway service
+  cloud_gateway_2nd_network:
+    type: string
+    description: cloud gateway 2nd interface network
+  cloud_gateway_2nd_subnet:
+    type: string
+    description: cloud gateway 2nd interface subnet
+  # specific properties for xmx xms and container memory limit restriction
+  service_container_mem_limit:
+    type: number
+    description: Service container memory limit, unit byte
+  init_heap_size:
+    type: number
+    description: Init heap size value, unit megabyte - Xms flag
+  max_heap_size:
+    type: number
+    description: Max heap size value, unit megabyte - Xmx flag
+  # properties for health check
+  health_check_interval:
+    type: number
+    description: Health check interval
+  health_check_timeout:
+    type: number
+    description: Health check timeout
+  health_check_retry:
+    type: number
+    description: Health check retry
+
+resources:
+  vsmart_service:
+    type: "OS::Vsmart::Service::Base"
+    properties:
+      image: {get_param: image}
+      flavor: {get_param: flavor}
+      key_name: {get_param: key_name}
+      metadata: {get_param: metadata}
+      network: {get_param: network}
+      subnet: {get_param: subnet}
+      security_group: {get_param: security_group}
+      service_name: {get_param: service_name}
+      service_version: {get_param: service_version}
+      service_docker_image_repo: {get_param: service_docker_image_repo}
+      service_log_volume: {get_param: service_log_volume}
+      elastic_search_ip: {get_param: elastic_search_ip}
+      jaeger_collector_url: {get_param: jaeger_collector_url}
+      working_dir: {get_param: working_dir}
+      active_profile: {get_param: active_profile}
+      cloud_config_uri: {get_param: cloud_config_uri}
+      cloud_config_commit_id: { get_param: cloud_config_commit_id }
+      service_port: {get_param: service_port}
+
+      cloud_config_git_uri: {get_param: cloud_config_git_uri}
+
+      health_check_interval: { get_param: health_check_interval }
+      health_check_timeout: { get_param: health_check_timeout }
+      health_check_retry: { get_param: health_check_retry }
+
+      init_heap_size: { get_param: init_heap_size }
+      max_heap_size: { get_param: max_heap_size }
+      service_container_mem_limit: { get_param: service_container_mem_limit }
+
+
+  member:
+    type: OS::Octavia::PoolMember
+    properties:
+      pool: {get_param: private_lb_pool_id}
+      address: {get_attr: [vsmart_service, resource.server, first_address]}
+      protocol_port: {get_param: service_port}
+      subnet: {get_param: subnet}
+
+outputs:
+  server_ip:
+    description: IP Address of the service server
+    value: {get_attr: [vsmart_service, resource.server, first_address]}

@@ -1,0 +1,6 @@
+---
+- name: Create inventory files for production environments
+  template:
+    src: "deploy_vsmart_template.j2"
+    dest: "{{CURRENT_JENKINS_LOCAL_DIR}}/deploy_vsmart.yml"
+    mode: 0644

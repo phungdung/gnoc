@@ -1,0 +1,10 @@
+SELECT a.CPTE_ID   AS cpteId,
+  a.CR_PROCESS_ID  AS crProcessId,
+  a.TEMP_IMPORT_ID AS tempImportId,
+  a.FILE_TYPE      AS fileType,
+  b.name,
+  b.code
+FROM OPEN_PM.CR_PROCESS_TEMPLATE a
+LEFT JOIN OPEN_PM.TEMP_IMPORT b
+ON a.TEMP_IMPORT_ID = b.TEMP_IMPORT_ID
+WHERE a.CR_PROCESS_ID = :crProcessId

@@ -1,0 +1,22 @@
+SELECT
+GF.ID id,
+GF.BUSINESS_CODE businessCode,
+GF.BUSINESS_ID businessId,
+GF.PATH path,
+GF.FILE_NAME fileName,
+GF.FILE_TYPE fileType,
+GF.CONTENT content,
+GF.REQUIRED required,
+GF.COMMENTS comments,
+GF.TEMPLATE_ID templateId,
+GF.TYPE_WS typeWs,
+GF.CREATE_UNIT_ID createUnitId,
+GF.CREATE_UNIT_NAME createUnitName,
+GF.CREATE_USER_ID createUserId,
+GF.CREATE_USER_NAME createUserName,
+GF.CREATE_TIME createTime,
+GF.MAPPING_ID mappingId
+FROM COMMON_GNOC.GNOC_FILE GF
+WHERE 1=1
+AND GF.BUSINESS_CODE = :p_businessCode
+AND GF.BUSINESS_ID = :p_businessId

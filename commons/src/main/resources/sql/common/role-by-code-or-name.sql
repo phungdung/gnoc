@@ -1,0 +1,8 @@
+SELECT
+ROLE_ID itemId,
+ROLE_CODE itemCode,
+ROLE_NAME itemName,
+DESCRIPTION description,
+STATUS status
+FROM COMMON_GNOC.ROLES
+WHERE STATUS = 1 AND ROLE_CODE like '%PM_%'

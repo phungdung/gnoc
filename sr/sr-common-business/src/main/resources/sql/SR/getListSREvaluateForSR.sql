@@ -1,0 +1,10 @@
+SELECT se.EVALUATE_ID,
+  se.EVALUATE,
+  se.EVALUATE_REASON,
+  se.SR_ID,
+  se.CREATE_DATE,
+  se.CREATE_USER
+FROM OPEN_PM.SR_EVALUATE se
+LEFT JOIN OPEN_PM.SR sr
+ON sr.SR_ID          = se.SR_ID
+WHERE 1              =1

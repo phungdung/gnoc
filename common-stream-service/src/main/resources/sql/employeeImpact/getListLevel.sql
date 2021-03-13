@@ -1,0 +1,7 @@
+select
+t1.ITEM_ID itemId,
+t1.ITEM_CODE itemCode,
+t1.ITEM_NAME itemName,
+t1.ITEM_VALUE itemValue
+from COMMON_GNOC.CAT_ITEM t1
+where CATEGORY_ID in (select CATEGORY_ID from COMMON_GNOC.CATEGORY where CATEGORY_CODE = 'GNOC_IMPACT')

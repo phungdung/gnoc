@@ -1,0 +1,3 @@
+SELECT DISTINCT m.wo_code woCode
+FROM open_pm.MR_SCHEDULE_BTS_HIS_DETAIL m
+WHERE 1 = 1

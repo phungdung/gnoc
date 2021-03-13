@@ -1,0 +1,6 @@
+SELECT  DISTINCT DEVICE_TYPE deviceType
+FROM    OPEN_PM.MR_DEVICE
+WHERE   NETWORK_TYPE = :networkType
+AND     DEVICE_TYPE = :deviceType
+AND ARRAY_CODE = :arrayCode
+AND 1 = 1

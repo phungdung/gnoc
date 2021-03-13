@@ -1,0 +1,14 @@
+SELECT
+t3.WEBSERVICE_ID webServiceId,
+t3.WEBSERVICE_NAME webServiceName,
+t3.URL url,
+t3.NAMESPACE_URI nameSpaceURI,
+t3.LOCALPART localPart,
+t3.WEBSERVICE_CLASS_PATH webServiceClassPath,
+t3.GET_PORT_METHOD getPortMethod,
+t3.USER_NAME userName,
+t3.PASSWORD password,
+t3.IS_ACTIVE isActive,
+t3.IS_EDITABLE isEditable
+FROM OPEN_PM.WEBSERVICE t3
+WHERE 1 = 1

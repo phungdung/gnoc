@@ -1,0 +1,33 @@
+{% set mem_limit_config = service_mem_limit_config[service_name] if service_mem_limit_config[service_name] is defined else service_mem_limit_config["default"] %}
+version: '2.4'
+
+volumes:
+    {{service_log_volume}}: {}
+
+services:
+  {{service_name}}:
+    image: {{docker_pull_image_registry_url}}/vsmart/{{docker_repo_name}}/{{service_name}}:{{service_version}}
+    container_name: {{service_name}}
+    stop_signal: SIGINT
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    network_mode: "host"
+    mem_limit : {{mem_limit_config.service_container_mem_limit}}
+    volumes:
+      - {{service_log_volume}}:/app/log
+    entrypoint: java -Xms{{ mem_limit_config.init_heap_size }}m -Xmx{{ mem_limit_config.max_heap_size }}m -Djava.security.egd=file:///dev/urandom -jar /app/{{ service_name }}.jar
+{% if service_name == 'configuration-service' %}
+    command: ["--spring.profiles.active={{active_profile}}", "--spring.cloud.config.server.git.uri={{cloud_config_git_uri}}", "--spring.cloud.config.label={{cloud_config_git_commit_id}}", "--server.port={{service_port}}"]
+{% elif service_name == 'discovery-service' %}
+    command: ["--spring.cloud.config.uri={{cloud_config_uri}}", "--spring.cloud.config.label={{cloud_config_git_commit_id}}", "--spring.profiles.active={{active_profile}},{{eureka_profile}}", "--server.port={{service_port}}"]
+{% elif service_name == 'gateway-service' %}
+    command: ["--spring.cloud.config.uri={{cloud_config_uri}}", "--spring.cloud.config.label={{cloud_config_git_commit_id}}", "--spring.profiles.active={{active_profile}}", "--server.port={{service_port}}"]
+{% else %}
+    command: ["--spring.cloud.config.uri={{cloud_config_uri}}", "--spring.cloud.config.label={{cloud_config_git_commit_id}}", "--spring.profiles.active={{active_profile}}", "--server.port={{service_port}}"]
+{% endif %}
+    healthcheck:
+      interval: {{ health_check.interval }}s
+      timeout: {{ health_check.timeout }}s
+      retries: {{ health_check.retry }}
+      test: ["CMD", "curl", "-f", "http://localhost:{{service_port}}/actuator/health"]
+    restart: always

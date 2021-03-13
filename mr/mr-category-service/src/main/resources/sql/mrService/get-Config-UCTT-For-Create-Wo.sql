@@ -1,0 +1,1 @@
+SELECT CONFIG_VALUE value FROM OPEN_PM.MR_CONFIG where CONFIG_GROUP = :configGroup AND CONFIG_CODE = :configCode

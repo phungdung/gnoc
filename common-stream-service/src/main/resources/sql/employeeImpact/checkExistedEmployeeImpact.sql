@@ -1,0 +1,6 @@
+SELECT *
+FROM COMMON_GNOC.EMPLOYEE_IMPACT t1
+WHERE t1.EMP_USERNAME  = :empUsername
+AND t1.EMP_ARRAY       = :empArray
+AND t1.EMP_ARRAY_CHILD = :empArrayChild
+AND t1.EMP_LEVEL       = :empLevel

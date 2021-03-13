@@ -1,0 +1,2 @@
+select * from MR_USER_CFG_APPROVED_SMS_BTS x
+WHERE 1=1

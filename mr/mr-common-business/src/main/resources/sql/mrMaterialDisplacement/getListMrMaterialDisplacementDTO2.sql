@@ -1,0 +1,11 @@
+SELECT T1.MATERIAL_ID materialId ,
+  T1.MATERIAL_NAME materialName ,
+  T1.SERIAL serial ,
+  T1.UNIT unit ,
+  T1.UNIT_PRICE unitPrice ,
+  T1.QUANTITY quantity ,
+  T1.FUEL_TYPE fuelType ,
+  T1.DEVICE_TYPE deviceType ,
+  NVL(T1.UNIT_PRICE, 0) * NVL(T1.QUANTITY, 0) totalCost
+FROM OPEN_PM.MR_MATERIAL_DISPLACEMENT T1
+WHERE 1=1

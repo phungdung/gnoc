@@ -1,0 +1,3 @@
+SELECT  c.*
+FROM    CFG_MAP_UNIT_GNOC_NIMS c
+WHERE   LOWER(c.UNIT_NIMS_CODE) = :unitNimsCode

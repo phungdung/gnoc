@@ -1,0 +1,7 @@
+[all:vars]
+ansible_connection=ssh
+ansible_ssh_user={{SSH_USER_NAME}}
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+[staging_servers]
+staging_server ansible_port=22 ansible_host={{STAGING_PUBLIC_IP}} ansible_ssh_private_key_file={{SSH_PRIVATE_KEY_PATH}}

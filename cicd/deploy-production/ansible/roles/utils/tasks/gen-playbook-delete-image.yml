@@ -1,0 +1,6 @@
+---
+- name: Create inventory files for production environments
+  template:
+    src: "delete_old_images_production_template.j2"
+    dest: "{{CURRENT_JENKINS_LOCAL_DIR}}/delete_old_images_production.yml"
+    mode: 0644

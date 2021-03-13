@@ -1,0 +1,10 @@
+SELECT a.CPDGP_ID   AS cpdgpId,
+  a.GROUP_UNIT_ID   AS groupUnitId,
+  a.CR_PROCESS_ID   AS crProcessId,
+  a.CPDGP_TYPE      AS cpdgpType,
+  b.GROUP_UNIT_NAME AS groupUnitName,
+  b.GROUP_UNIT_CODE AS groupUnitCode
+FROM OPEN_PM.CR_PROCESS_DEPT_GROUP a
+LEFT JOIN OPEN_PM.GROUP_UNIT b
+ON a.GROUP_UNIT_ID = b.GROUP_UNIT_ID
+WHERE a.CR_PROCESS_ID = :crProcessId

@@ -1,0 +1,132 @@
+server:
+  port: 8060
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8061/eureka/
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: 6e72e4ffd4a7e4f5e9462d08111766b5022d42517c868ded6fcb73ddd82f2b8242f2fabd241a7e81e59e20cf4e83e5c3
+    username: a7b52025632ede67916405ce4d927957
+    password: c4114bd15ac9b53fb6f306719b98cfc2
+    hikari:
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      maximum-pool-size: 40
+      minimum-idle: 5
+    jpa:
+      properties:
+        hibernate:
+          dialect: org.hibernate.dialect.Oracle10gDialect
+          show_sql: true
+  main:
+    allow-bean-definition-overriding: true
+    web-application-type: reactive
+  security:
+    authentication:
+      jwt:
+        secret: changeit
+        token-validity-in-seconds: 86400000
+        token-validity-in-seconds-for-remember-me: 2592000000
+  cloud.gateway:
+    discovery:
+      locator:
+        enabled: true
+        lowerCaseServiceId: true
+    routes:
+    - id: hazelcast-service
+      uri: lb://hazelcast-service
+      predicates:
+      - Path=/hazelcast/**
+    - id: authen
+      uri: lb://authen-service
+      predicates:
+      - Path=/oauthVsa/**
+    - id: comstream
+      uri: lb://common-stream-service
+      predicates:
+      - Path=/common-stream-service/**
+    - id: od-service
+      uri: lb://od-service
+      predicates:
+      - Path=/od-service/**
+    - id: od-category
+      uri: lb://od-category-service
+      predicates:
+      - Path=/od-category-service/**
+    - id: od-outside
+      uri: lb://od-outside-service
+      predicates:
+      - Path=/od-outside-service/**
+    - id: pt-service
+      uri: lb://pt-service
+      predicates:
+      - Path=/pt-service/**
+    - id: pt-outside
+      uri: lb://pt-outside-service
+      predicates:
+      - Path=/pt-outside-service/**
+    - id: kedb-outside
+      uri: lb://kedb-outside-service
+      predicates:
+      - Path=/kedb-outside-service/**
+    - id: tt-service
+      uri: lb://tt-service
+      predicates:
+      - Path=/tt-service/**
+    - id: tt-category
+      uri: lb://tt-category-service
+      predicates:
+      - Path=/tt-category-service/**
+    - id: tt-outside
+      uri: lb://tt-outside-service
+      predicates:
+      - Path=/tt-outside-service/**
+    - id: cr-service
+      uri: lb://cr-service
+      predicates:
+      - Path=/cr-service/**
+    - id: cr-outside
+      uri: lb://cr-outside-service
+      predicates:
+      - Path=/cr-outside-service/**
+    - id: wo-outside
+      uri: lb://wo-outside-service
+      predicates:
+      - Path=/wo-outside-service/**
+    - id: wo-vsmart
+      uri: lb://wo-vsmart-service
+      predicates:
+      - Path=/wo-vsmart-service/**
+    - id: wo-service
+      uri: lb://wo-service
+      predicates:
+      - Path=/wo-service/**
+    - id: wo-category
+      uri: lb://wo-category-service
+      predicates:
+      - Path=/wo-category-service/**
+logging:
+  file: ./log/gateway-service.log
+  file.max-history: 10
+  file.max-size: 10MB
+  level:
+    ROOT: info
+opentracing:
+  jaeger:
+    udp-sender:
+      host: localhost
+      port: 6831
+    log-spans: false
+    probabilistic-sampler:
+      sampling-rate: 0.01
+application:
+  passport:
+    logedInTimeOut: 60

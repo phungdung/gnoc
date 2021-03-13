@@ -1,0 +1,4 @@
+SELECT *
+FROM TROUBLES_IBM
+where 1=1
+

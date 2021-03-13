@@ -1,0 +1,24 @@
+version: '3.2'
+
+volumes:
+  vsmart_logs: {}
+
+services:
+{% for service_name in service_list %}
+  {{service_name}}:
+    image: {{docker_pull_image_registry_url}}/vsmart/{{docker_repo_name}}/{{service_name}}:{{service_version}}
+    container_name: {{service_name}}
+    stop_signal: SIGINT
+    network_mode: "host"
+    volumes:
+      - {{service_log_volume}}:/app/log
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    entrypoint: ["java", "{{ pre_production_jvm_opts }}", "{{ pre_production_jvm_debug_opts }}","-Djava.security.egd=file:///dev/urandom","-jar", "/app/{{ service_name }}.jar"]
+{% if service_name == 'configuration-service' %}
+    command: ["--spring.profiles.active={{active_profile}}", "--spring.cloud.config.server.git.uri={{cloud_config_git_uri}}", "--server.port={{SERVICE_PORT_LIST[service_name]}}"]
+{% else %}
+    command: ["--spring.cloud.config.uri={{cloud_config_uri}}", "--spring.cloud.config.label={{cloud_config_git_commit_id}}", "--spring.profiles.active={{pre_production_active_profile}}", "--server.port={{SERVICE_PORT_LIST[service_name]}}"]
+{% endif %}
+    restart: always
+{% endfor %}

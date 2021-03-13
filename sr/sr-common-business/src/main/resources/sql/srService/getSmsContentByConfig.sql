@@ -1,0 +1,11 @@
+SELECT CONFIG_DES configName,
+  CONFIG_ID configId
+FROM
+  (SELECT CONFIG_DES,
+    CONFIG_ID
+  FROM OPEN_PM.SR_CONFIG2
+  WHERE STATUS     = 'A'
+  AND CONFIG_CODE  = :configCode
+  AND CONFIG_GROUP = :configGroup
+  )
+WHERE ROWNUM = 1

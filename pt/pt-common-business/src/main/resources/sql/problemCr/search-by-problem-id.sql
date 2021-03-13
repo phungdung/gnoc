@@ -1,0 +1,4 @@
+SELECT PROBLEM_CR_ID problemCrId, PROBLEM_ID problemId, CR_ID crId, PT_STATUS_ID ptStatusId
+FROM PROBLEM_CR
+WHERE
+1 = 1

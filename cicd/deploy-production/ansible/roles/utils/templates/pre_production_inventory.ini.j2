@@ -1,0 +1,6 @@
+[all:vars]
+ansible_connection=ssh
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+[pre_production_servers]
+pre_production_server ansible_port=22 ansible_host={{PRE_PRODUCTION_IP}}

@@ -1,0 +1,23 @@
+SELECT DISTINCT s.ID itemId,
+  s.SYSTEM_CODE itemCode,
+  s.SYSTEM_NAME itemName,
+  s.COUNTRY_ID countryId
+FROM WFM.RISK_SYSTEM s
+LEFT JOIN WFM.RISK_SYSTEM_DETAIL sd
+ON s.ID = sd.SYSTEM_ID
+LEFT JOIN common_gnoc.cat_item ci1
+ON s.COUNTRY_ID = ci1.item_id
+LEFT JOIN
+  (SELECT *
+  FROM COMMON_GNOC.CAT_ITEM
+  WHERE STATUS        = 1
+  AND PARENT_ITEM_ID IS NULL
+  AND CATEGORY_ID     =
+    (SELECT CATEGORY_ID
+    FROM COMMON_GNOC.CATEGORY
+    WHERE CATEGORY_CODE = :categoryCode
+    AND status          = 1
+    )
+  ) ci2
+ON TO_CHAR(s.SYSTEM_PRIORITY) = ci2.ITEM_VALUE
+WHERE 1                       = 1

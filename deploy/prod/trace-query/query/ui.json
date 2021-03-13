@@ -1,0 +1,25 @@
+{
+    "dependencies": {
+        "dagMaxNumServices": 600,
+        "menuEnabled": true
+    },
+    "tracking": {
+        "gaID": null,
+        "trackErrors": false
+    },
+    "menu": [
+        {
+            "label": "gnoc Tracing",
+            "items": [
+                {
+                    "label": "Repo",
+                    "url": "http://10.240.203.2:8180/spqtnv/gnoc/service-backend"
+                },
+                {
+                    "label": "Contact",
+                    "url": "mailto:cloud@viettel.com.vn"
+                }
+            ]
+        }
+    ]
+}

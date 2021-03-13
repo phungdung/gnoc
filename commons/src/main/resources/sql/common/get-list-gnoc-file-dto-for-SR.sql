@@ -1,0 +1,23 @@
+SELECT
+GF.ID id,
+GF.BUSINESS_CODE businessCode,
+GF.BUSINESS_ID businessId,
+GF.PATH path,
+GF.FILE_NAME fileName,
+sf.FILE_CONTENT content,
+sf.REQUIRE_CREATE_SR required,
+sf.FILE_TYPE fileType,
+sf.COMMENTS comments,
+sf.TEMPLATE_ID templateId,
+sf.TYPE_WS typeWs,
+GF.CREATE_UNIT_ID createUnitId,
+GF.CREATE_UNIT_NAME createUnitName,
+GF.CREATE_USER_ID createUserId,
+GF.CREATE_USER_NAME createUserName,
+GF.CREATE_TIME createTime,
+GF.MAPPING_ID mappingId
+FROM COMMON_GNOC.GNOC_FILE GF
+INNER JOIN OPEN_PM.SR_FILES sf on GF.BUSINESS_ID = sf.OBEJCT_ID and GF.MAPPING_ID =sf.FILE_ID
+WHERE 1=1
+AND GF.BUSINESS_CODE = :p_businessCode
+AND GF.BUSINESS_ID = :p_businessId

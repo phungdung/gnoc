@@ -1,0 +1,4 @@
+---
+- include: ensure-service-stopped.yml
+- include: pull-newest-service-image.yml
+- include: start-service.yml

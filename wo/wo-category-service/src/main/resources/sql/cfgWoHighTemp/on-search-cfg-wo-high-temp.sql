@@ -1,0 +1,13 @@
+SELECT T1.ID id,
+  T1.REASON_LV1_ID reasonLv1Id,
+  T1.REASON_LV2_ID reasonLv2Id,
+  T1.ACTION_ID actionId,
+  T1.ACTION_NAME_ID actionNameId,
+  T1.PRIORITY_ID priorityId,
+  T1.CD_TYPE cdType,
+  T1.PROCESS_TIME processTime,
+  T1.IS_ASSIGN_FT isAssignFt,
+  T1.REPORT_FAILURE_TYPE reportFailureType,
+  T1.STATUS status
+FROM WFM.CFG_WO_HIGH_TEMP T1
+WHERE 1=1

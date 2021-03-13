@@ -1,0 +1,21 @@
+SELECT id ,
+  cr_id AS crId ,
+  DEVICE_TYPE_CODE deviceTypeCode ,
+  DEVICE_TYPE_ID deviceTypeId ,
+  FAULT_GROUP_ID faultGroupId ,
+  FAULT_GROUP_NAME faultGroupName ,
+  FAULT_ID faultId ,
+  FAULT_LEVEL_CODE faultLevelCode ,
+  FAULT_LEVEL_ID faultLevelId ,
+  FAULT_NAME faultName ,
+  FAULT_SRC faultSrc ,
+  ID ,
+  VENDOR_CODE vendorCode ,
+  VENDOR_ID vendorId ,
+  VENDOR_NAME vendorName ,
+  MODULE_CODE AS moduleCode ,
+  MODULE_NAME AS moduleName ,
+  NATION_CODE AS nationCode,
+  keyword
+FROM CR_ALARM alarm
+WHERE ( alarm.CR_ID IN (:crId0)

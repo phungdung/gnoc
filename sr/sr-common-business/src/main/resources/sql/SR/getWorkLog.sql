@@ -1,0 +1,38 @@
+SELECT T1.SR_ID srId ,
+  T2.CREATED_USER createdUser ,
+  T2.CREATED_TIME createdTime,
+  ('['
+  || T2.WL_TYPE_ID
+  || ']'
+  || T2.WL_TYPE_NAME
+  || ' || '
+  ||
+  CASE
+    WHEN T2.REASON IS NULL
+    THEN 'N/A'
+    ELSE T2.REASON
+  END
+  || ' || '
+  || T2.WL_TEXT ) AS wlText,
+  T2.WL_TEXT reason
+FROM
+  (SELECT sr_id FROM OPEN_PM.SR A WHERE 1=1 fromDate toDate
+  ) T1
+LEFT JOIN
+  (SELECT WL_TEXT,
+    A.CREATED_USER,
+    A.CREATED_TIME,
+    SR_ID,
+    A.REASON_REJECT_ID,
+    B.REASON,
+    A.WL_TYPE_ID,
+    C.WL_TYPE_NAME
+  FROM OPEN_PM.SR_WORKLOG A
+  LEFT JOIN OPEN_PM.SR_WORKLOG_TYPE C
+  ON A.WL_TYPE_ID = C.WL_TYPE_ID
+  LEFT JOIN OPEN_PM.SR_REASON_REJECT B
+  ON A.REASON_REJECT_ID = B.REASON_REJECT_ID
+  WHERE 1               =1 fromDate toDate
+  ) T2 ON T1.SR_ID      = T2.SR_ID
+WHERE 1                 =1
+AND T2.WL_TEXT         IS NOT NULL

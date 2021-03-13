@@ -1,0 +1,33 @@
+WITH tmp_data AS
+  (SELECT CONFIG_GROUP,
+    CONFIG_CODE,
+    CONFIG_NAME
+  FROM SR_CONFIG
+  WHERE CONFIG_GROUP = 'OTHER_SYS_SERVICE'
+  AND STATUS         = 'A'
+  ),
+  tmp_data2 AS
+  (SELECT CONFIG_ID,
+    CONFIG_GROUP,
+    CONFIG_CODE,
+    CONFIG_NAME
+  FROM SR_CONFIG
+  WHERE STATUS = 'A'
+  ),
+  tmp_data3 AS
+  ( SELECT DISTINCT SERVICE_CODE,
+    SERVICE_NAME
+  FROM SR_CATALOG
+  WHERE STATUS = 'A'
+  )
+SELECT a.SERVICE_NAME serviceName ,
+  a.SERVICE_CODE serviceCode ,
+  b.CONFIG_ID configId ,
+  c.CONFIG_CODE configCode ,
+  c.CONFIG_NAME configName
+FROM tmp_data3 a
+JOIN tmp_data2 b
+ON a.SERVICE_CODE = b.CONFIG_CODE
+JOIN tmp_data c
+ON b.CONFIG_GROUP = c.CONFIG_CODE
+WHERE 1           =1

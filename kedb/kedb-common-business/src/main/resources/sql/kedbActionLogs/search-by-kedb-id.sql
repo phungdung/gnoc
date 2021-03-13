@@ -1,0 +1,5 @@
+select ID, CONTENT, CREATE_TIME createTime,
+CREATE_UNIT_NAME createUnitName, CREATE_USER_NAME createUserName, KEDB_ID kedbId, STATUS
+from KEDB_ACTION_LOGS
+WHERE
+1 = 1

@@ -1,0 +1,10 @@
+apm-server.frontend.enabled: true
+
+output.elasticsearch:
+  hosts: ['elasticsearch:9200']
+  protocol: "http"
+
+setup.kibana:
+  host: "http://kibana:5601"
+  protocol: "http"
+  ssl.enabled: false

@@ -1,0 +1,807 @@
+version: '3.2'
+
+volumes:
+  gnoc_logs: {}
+  common-temp:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_TEMP_MOUNT_LOCATION}/${GNOC_COMMON_TEMP_FOLDER}
+      o: bind
+  common-upload:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_UPLOAD_MOUNT_LOCATION}/${GNOC_COMMON_UPLOAD_FOLDER}
+      o: bind
+  od-temp:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_TEMP_MOUNT_LOCATION}/${GNOC_OD_TEMP_FOLDER}
+      o: bind
+  od-upload:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_UPLOAD_MOUNT_LOCATION}/${GNOC_OD_UPLOAD_FOLDER}
+      o: bind
+  pt-temp:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_TEMP_MOUNT_LOCATION}/${GNOC_PT_TEMP_FOLDER}
+      o: bind
+  pt-upload:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_UPLOAD_MOUNT_LOCATION}/${GNOC_PT_UPLOAD_FOLDER}
+      o: bind
+  kedb-temp:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_TEMP_MOUNT_LOCATION}/${GNOC_KEDB_TEMP_FOLDER}
+      o: bind
+  kedb-upload:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_UPLOAD_MOUNT_LOCATION}/${GNOC_KEDB_UPLOAD_FOLDER}
+      o: bind
+  tt-temp:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_TEMP_MOUNT_LOCATION}/${GNOC_TT_TEMP_FOLDER}
+      o: bind
+  tt-upload:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_UPLOAD_MOUNT_LOCATION}/${GNOC_TT_UPLOAD_FOLDER}
+      o: bind
+  wo-temp:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_TEMP_MOUNT_LOCATION}/${GNOC_WO_TEMP_FOLDER}
+      o: bind
+  wo-upload:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_UPLOAD_MOUNT_LOCATION}/${GNOC_WO_UPLOAD_FOLDER}
+      o: bind
+  cr-temp:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_TEMP_MOUNT_LOCATION}/${GNOC_CR_TEMP_FOLDER}
+      o: bind
+  cr-upload:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_UPLOAD_MOUNT_LOCATION}/${GNOC_CR_UPLOAD_FOLDER}
+      o: bind
+  sr-temp:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_TEMP_MOUNT_LOCATION}/${GNOC_SR_TEMP_FOLDER}
+      o: bind
+  sr-upload:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_UPLOAD_MOUNT_LOCATION}/${GNOC_SR_UPLOAD_FOLDER}
+      o: bind
+  risk-temp:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_TEMP_MOUNT_LOCATION}/${GNOC_RISK_TEMP_FOLDER}
+      o: bind
+  risk-upload:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_UPLOAD_MOUNT_LOCATION}/${GNOC_RISK_UPLOAD_FOLDER}
+      o: bind
+  mr-temp:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_TEMP_MOUNT_LOCATION}/${GNOC_MR_TEMP_FOLDER}
+      o: bind
+  mr-upload:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${GNOC_UPLOAD_MOUNT_LOCATION}/${GNOC_MR_UPLOAD_FOLDER}
+      o: bind
+services:
+  configuration-service:
+    build:
+      context: ../configuration-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/configuration-service:${TAG}"
+    container_name: "configuration-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    restart: always
+  discovery-service:
+    build:
+      context: ../discovery-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/discovery-service:${TAG}"
+    container_name: "discovery-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+    restart: always
+  gateway-service:
+    build:
+      context: ../gateway-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/gateway-service:${TAG}"
+    container_name: "gateway-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+      - hazelcast-service
+    restart: always
+  hazelcast-service:
+    build:
+      context: ../hazelcast-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/hazelcast-service:${TAG}"
+    container_name: "hazelcast-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+    restart: always
+  authen-service:
+    build:
+      context: ../authen-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/authen-service:${TAG}"
+    container_name: "authen-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+      - hazelcast-service
+    restart: always
+  common-stream-service:
+    build:
+      context: ../common-stream-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/common-stream-service:${TAG}"
+    container_name: "common-stream-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','common-temp:/app/common-temp','common-upload:/data2/TT']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+      - hazelcast-service
+    restart: always
+  od-service:
+    build:
+      context: ../od/od-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/od-service:${TAG}"
+    container_name: "od-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','od-temp:/app/od-temp','od-upload:/data2/WFM','sr-upload:/data2/SR']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+      - hazelcast-service
+    restart: always
+  od-category-service:
+    build:
+      context: ../od/od-category-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/od-category-service:${TAG}"
+    container_name: "od-category-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','od-temp:/app/od-temp','od-upload:/data2/WFM']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+      - hazelcast-service
+    restart: always
+  od-outside-service:
+    build:
+      context: ../od/od-outside-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/od-outside-service:${TAG}"
+    container_name: "od-outside-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','od-temp:/app/od-temp','od-upload:/data2/WFM']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+      - hazelcast-service
+    restart: always
+  pt-service:
+    build:
+      context: ../pt/pt-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/pt-service:${TAG}"
+    container_name: "pt-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','pt-temp:/app/pt-temp','pt-upload:/data2/PT','kedb-upload:/data2/PT','common-upload:/data2/PT']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+      - hazelcast-service
+    restart: always
+  pt-category-service:
+    build:
+      context: ../pt/pt-category-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/pt-category-service:${TAG}"
+    container_name: "pt-category-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','pt-temp:/app/pt-temp','pt-upload:/data2/PT','common-upload:/data2/PT']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+      - hazelcast-service
+    restart: always
+  pt-outside-service:
+    build:
+      context: ../pt/pt-outside-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/pt-outside-service:${TAG}"
+    container_name: "pt-outside-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','pt-temp:/app/pt-temp','pt-upload:/data2/PT']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+      - hazelcast-service
+    restart: always
+  kedb-outside-service:
+    build:
+      context: ../kedb/kedb-outside-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/kedb-outside-service:${TAG}"
+    container_name: "kedb-outside-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','kedb-temp:/app/kedb-temp','kedb-upload:/data2/PT','pt-upload:/data2/PT']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  kedb-service:
+    build:
+      context: ../kedb/kedb-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/kedb-service:${TAG}"
+    container_name: "kedb-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','kedb-temp:/app/kedb-temp','kedb-upload:/data2/PT','pt-upload:/data2/PT']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+      - hazelcast-service
+    restart: always
+  tt-service:
+    build:
+      context: ../tt/tt-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/tt-service:${TAG}"
+    container_name: "tt-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','tt-temp:/app/tt-temp','tt-upload:/data2/TT']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+      - configuration-service
+      - discovery-service
+      - hazelcast-service
+    restart: always
+  tt-category-service:
+    build:
+      context: ../tt/tt-category-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/tt-category-service:${TAG}"
+    container_name: "tt-category-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','tt-temp:/app/tt-temp','tt-upload:/data2/TT']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  tt-outside-service:
+    build:
+      context: ../tt/tt-outside-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/tt-outside-service:${TAG}"
+    container_name: "tt-outside-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','tt-temp:/app/tt-temp','tt-upload:/data2/TT']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  wo-category-service:
+    build:
+      context: ../wo/wo-category-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/wo-category-service:${TAG}"
+    container_name: "wo-category-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','wo-temp:/app/wo-temp','wo-upload:/data2/WFM']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  wo-service:
+    build:
+      context: ../wo/wo-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/wo-service:${TAG}"
+    container_name: "wo-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','wo-temp:/app/wo-temp','wo-upload:/data2/WFM','sr-upload:/data2/SR']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  wo-outside-service:
+    build:
+      context: ../wo/wo-outside-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/wo-outside-service:${TAG}"
+    container_name: "wo-outside-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','wo-temp:/app/wo-temp','wo-upload:/data2/WFM']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  wo-vsmart-service:
+    build:
+      context: ../wo/wo-vsmart-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/wo-vsmart-service:${TAG}"
+    container_name: "wo-vsmart-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','wo-temp:/app/wo-temp','wo-upload:/data2/WFM']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  cr-category-service:
+    build:
+      context: ../cr/cr-category-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/cr-category-service:${TAG}"
+    container_name: "cr-category-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','cr-temp:/app/cr-temp','cr-upload:/data2/CR']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  cr-service:
+    build:
+      context: ../cr/cr-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/cr-service:${TAG}"
+    container_name: "cr-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','cr-temp:/app/cr-temp','cr-upload:/data2/CR','sr-upload:/data2/SR']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  cr-outside-service:
+    build:
+      context: ../cr/cr-outside-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/cr-outside-service:${TAG}"
+    container_name: "cr-outside-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','cr-temp:/app/cr-temp','cr-upload:/data2/CR']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  sr-service:
+    build:
+      context: ../sr/sr-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/sr-service:${TAG}"
+    container_name: "sr-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','sr-temp:/app/sr-temp','sr-upload:/data2/SR','od-upload:/data2/WFM','cr-upload:/data2/CR','wo-upload:/data2/WFM']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  sr-category-service:
+    build:
+      context: ../sr/sr-category-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/sr-category-service:${TAG}"
+    container_name: "sr-category-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','sr-temp:/app/sr-temp','sr-upload:/data2/SR']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  sr-outside-service:
+    build:
+      context: ../sr/sr-outside-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/sr-outside-service:${TAG}"
+    container_name: "sr-outside-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','sr-temp:/app/sr-temp','sr-upload:/data2/SR']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  mr-category-service:
+    build:
+      context: ../mr/mr-category-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/mr-category-service:${TAG}"
+    container_name: "mr-category-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','mr-temp:/app/mr-temp','mr-upload:/data2/MR']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  mr-service:
+    build:
+      context: ../mr/mr-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/mr-service:${TAG}"
+    container_name: "mr-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','mr-temp:/app/mr-temp','mr-upload:/data2/MR']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  mr-outside-service:
+    build:
+      context: ../mr/mr-outside-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/mr-outside-service:${TAG}"
+    container_name: "mr-outside-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','mr-temp:/app/mr-temp','mr-upload:/data2/MR']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  risk-service:
+    build:
+      context: ../risk/risk-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/risk-service:${TAG}"
+    container_name: "risk-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','risk-temp:/app/risk-temp','tt-upload:/data2/WFM']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  risk-category-service:
+    build:
+      context: ../risk/risk-category-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/risk-category-service:${TAG}"
+    container_name: "risk-category-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','risk-temp:/app/risk-temp','risk-upload:/data2/WFM']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+  common-outside-service:
+    build:
+      context: ../common-outside-service
+      args:
+        PROJECT_VERSION: ${PROJECT_VERSION}
+        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/common-outside-service:${TAG}"
+    container_name: "common-outside-service"
+    network_mode: "host"
+    volumes: ['gnoc_logs:/app/log','common-temp:/app/common-temp','common-upload:/data2/TT']
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+      LANG: en_US.UTF-8
+      LANGUAGE: en_US:en
+      LC_ALL: en_US.UTF-8
+    depends_on:
+    - configuration-service
+    - discovery-service
+    - hazelcast-service
+    restart: always
+#  documentation-service:
+#    build:
+#      context: ../documentation-service
+#      args:
+#        PROJECT_VERSION: ${PROJECT_VERSION}
+#        JDK_BASE_IMAGE: ${JDK_BASE_IMAGE}
+#    image: "${IMAGE_REGISTRY_URL}/${PROJECT_CODE}/${IMAGE_TYPE}/documentation-service:${TAG}"
+#    container_name: "documentation-service"
+#    network_mode: "host"
+#    volumes: ['gnoc_logs:/app/log']
+#    environment:
+#      TZ: "Asia/Ho_Chi_Minh"
+#    depends_on:
+#      - configuration-service
+#      - discovery-service
+#      - gateway-service
+#      - hazelcast-service
+##      - od-service
+##      - od-category-service
+##      - pt-service
+##      - pt-category-service
+##      - kedb-service
+##      - authen-service
+##      - common-stream-service
+##      - tt-service
+##      - tt-category-service
+##      - wo-service
+##      - wo-category-service
+#    restart: always

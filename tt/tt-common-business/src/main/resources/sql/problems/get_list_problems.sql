@@ -1,0 +1,15 @@
+SELECT
+a.PROBLEM_CODE problemCode,
+a.PROBLEM_NAME problemName,
+a.RELATED_TT relatedTt,
+u.UNIT_NAME receiveUnitIdStr,
+s.ITEM_NAME statusStr,
+pr.ITEM_NAME priorityName,
+a.CREATED_TIME createdTime
+FROM   ONE_TM.PROBLEMS a, COMMON_GNOC.UNIT u, COMMON_GNOC.CAT_ITEM s, COMMON_GNOC.CAT_ITEM pr
+WHERE   a.RECEIVE_UNIT_ID = u.UNIT_ID(+)
+AND a.PRIORITY_ID = pr.ITEM_ID
+AND a.PROBLEM_STATE = s.ITEM_ID AND a.RELATED_TT =:relatedTt
+
+
+

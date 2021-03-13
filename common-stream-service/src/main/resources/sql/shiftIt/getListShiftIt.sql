@@ -1,0 +1,10 @@
+SELECT DISTINCT
+t2.ITEM_NAME kpiName,
+t1.KPI kpi,
+t1.EMERGENCY emergency,
+t1.SERIOUS serious,
+t1.MEDIUM medium,
+t1.TOTAL total,
+t1.NOTE note,
+t1.SHIFT_HANDOVER_ID shiftHandoverId
+FROM COMMON_GNOC.SHIFT_IT t1, COMMON_GNOC.CAT_ITEM t2 WHERE 1 = 1 AND t1.KPI = t2.ITEM_ID

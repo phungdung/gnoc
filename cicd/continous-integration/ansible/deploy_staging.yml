@@ -1,0 +1,167 @@
+---
+- name: Deploy staging environment
+  hosts: staging_servers
+  tasks:
+
+  - name: Check if build.sh file is exists
+    stat:
+      path: "{{WORKING_DIR}}/build.sh"
+    register: build_sh_file_details
+
+  - name: Check if docker-compose .env file is exists
+    stat:
+      path: "{{WORKING_DIR}}/.env"
+    register: compose_env_file_details
+
+  - name: Get stack service and manager running list
+    shell:
+      cmd: ./build.sh stack-show-all
+      chdir: "{{WORKING_DIR}}"
+    register: container_running_list
+    when:
+    - build_sh_file_details.stat.exists == True
+    - compose_env_file_details.stat.exists == True
+    ignore_errors: yes
+
+  - debug:
+      msg: "{{build_sh_file_details.stat.exists}}"
+
+  - debug:
+      msg: "{{compose_env_file_details.stat.exists}}"
+
+  - debug:
+      msg: "{{container_running_list}}"
+    when:
+    - compose_env_file_details.stat.exists == True
+    - build_sh_file_details.stat.exists == True
+
+  - set_fact:
+      service_stack_exists: False
+
+  - set_fact:
+      service_stack_exists: True
+    when:
+    - compose_env_file_details.stat.exists == True
+    - build_sh_file_details.stat.exists == True
+    - ' "configuration-service" in container_running_list.stdout '
+
+  - set_fact:
+      manager_stack_exists: False
+
+  - set_fact:
+      manager_stack_exists: True
+    when:
+    - compose_env_file_details.stat.exists == True
+    - build_sh_file_details.stat.exists == True
+    - ' "fluentd" in container_running_list.stdout '
+
+  - name: Stop existing old manager stack if exists
+    shell:
+      cmd: ./build.sh mgr-down
+      chdir: "{{WORKING_DIR}}"
+    when: manager_stack_exists == True
+    ignore_errors: yes
+    register: manager_down_output
+
+  - debug:
+      msg: "{{manager_down_output}}"
+    when: manager_stack_exists == True
+
+  - name: Stop existing old services stack if exists
+    shell:
+      cmd: ./build.sh staging-service-stack-down-rmi
+      chdir: "{{WORKING_DIR}}"
+    when: service_stack_exists == True
+    ignore_errors: yes
+    register: service_stack_down_output
+
+  - debug:
+      msg: "{{service_stack_down_output}}"
+    when: service_stack_exists == True
+
+  - name: Clean it if exists
+    file:
+      mode: 0775
+      owner: "{{ansible_ssh_user}}"
+      group: "{{ansible_ssh_user}}"
+      state: absent
+      path: "{{WORKING_DIR}}"
+
+  - name: Create working directory if not exists
+    file:
+      mode: 0775
+      owner: "{{ansible_ssh_user}}"
+      group: "{{ansible_ssh_user}}"
+      state: directory
+      path: "{{WORKING_DIR}}"
+
+  - name: Copy bash file to staging server
+    copy:
+      mode: 0755
+      src: "{{CURRENT_JENKINS_LOCAL_DIR}}/../../../build.sh"
+      dest: "{{WORKING_DIR}}"
+
+  - name: Copy deploy folder to staging server
+    copy:
+      src: "{{CURRENT_JENKINS_LOCAL_DIR}}/../../../deploy"
+      dest: "{{WORKING_DIR}}"
+
+  - name: create folder for each service
+    file:
+      mode: 0755
+      owner: "{{ansible_ssh_user}}"
+      group: "{{ansible_ssh_user}}"
+      state: "directory"
+      path: "{{WORKING_DIR}}/{{item}}"
+    with_items: "{{SERVICE_LIST}}"
+
+  - name: Create env file for current docker-compose stack
+    copy:
+      mode: 0755
+      dest: "{{WORKING_DIR}}/.env"
+      content: |
+        TAG={{IMAGE_TAG}}
+        IMAGE_TYPE={{IMAGE_TYPE}}
+        IMAGE_REGISTRY_URL={{IMAGE_REGISTRY_URL}}
+        DOCKER_STAGING_REGISTRY={{DOCKER_STAGING_REGISTRY}}
+        PROJECT_CODE={{PROJECT_CODE}}
+
+  - name: Start manager stack
+    shell:
+      cmd: ./build.sh mgr-up
+      chdir: "{{WORKING_DIR}}"
+    register: manager_up_output
+
+  - debug:
+      msg: "{{manager_up_output}}"
+
+  - name: Pull stack image
+    shell:
+      cmd: ./build.sh staging-service-stack-pull
+      chdir: "{{WORKING_DIR}}"
+    register: pull_image_output
+
+  - debug:
+      msg: "{{pull_image_output}}"
+
+  - name: Start service stack
+    shell:
+      cmd: ./build.sh staging-service-stack-up
+      chdir: "{{WORKING_DIR}}"
+    register: service_stack_up_output
+
+  - debug:
+      msg: "{{service_stack_up_output}}"
+
+  - name: Verify microservices is up
+    shell:
+      cmd: "./build.sh check-service-health {{item}}"
+      chdir: "{{WORKING_DIR}}"
+    with_items: "{{SERVICE_LIST}}"
+#    when: item != "hazelcast-service"
+
+  - name: wait for service list refresh
+    shell:
+      cmd: "sleep {{REFRESH_SERVICE_LIST_TIMEOUT}}"
+
+

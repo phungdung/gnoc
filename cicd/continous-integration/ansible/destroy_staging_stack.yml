@@ -1,0 +1,43 @@
+---
+- name: Destroy Heat Staging Stack
+  hosts: local
+
+  tasks:
+
+  - name: Set openstack cloud authentication info
+    set_fact:
+      os_auth:
+        auth_url: "{{openstack_staging_auth_url}}"
+        username: "{{ openstack_username }}"
+        password: "{{ openstack_password }}"
+        user_domain_name: "{{staging_user_domain_name}}"
+        project_domain_name: "{{staging_project_domain_name}}"
+        project_name: "{{staging_project_name}}"
+
+  - name: destroy stack
+    ignore_errors: False
+    register: stack_action_result
+    os_stack:
+      name: "{{ stack_name }}"
+      template: "staging_heat_template.yml"
+      region_name: "RegionOne"
+      auth: "{{ os_auth }}"
+      wait: yes
+      state: absent
+      parameters:
+        server_name: "staging-{{server_name}}"
+        key_name: "{{staging_ssh_key}}"
+        flavor: "{{staging_flavor}}"
+        image: "{{staging_image}}" # centos, docker and docker-compose, docker python lib
+        public_net_id: "{{staging_public_net_id}}" # 193.0/24
+        public_subnet_id: "{{staging_public_subnet_id}}" # 193.0/24
+        private_net_id: "{{staging_private_net_id}}" # cicd_staging_net_vlan138
+        private_subnet_id: "{{staging_private_subnet_id}}"
+        gitlab_merge_source_branch: "{{ gitlab_merge_source_branch }}"
+        gitlab_merge_target_branch: "{{ gitlab_merge_target_branch }}"
+        gitlab_project_api_url: "{{ gitlab_project_api_url }}"
+
+  - name: check result
+    debug:
+      msg: "{{ stack_action_result }}"
+

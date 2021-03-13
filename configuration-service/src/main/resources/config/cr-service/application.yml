@@ -1,0 +1,140 @@
+server:
+  port: 8108
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8061/eureka/
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: -1
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: 6e72e4ffd4a7e4f5e9462d08111766b5022d42517c868ded6fcb73ddd82f2b8242f2fabd241a7e81e59e20cf4e83e5c3
+    username: beee429cd52c7740635a6b21fabb90db
+    password: a10b816affc715f0ad7a0f238d92e268
+    hikari:
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      maximum-pool-size: 40
+      minimum-idle: 5
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.Oracle10gDialect
+        show_sql: true
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 30000
+        readTimeout: 30000
+        loggerLevel: full
+logging:
+  file: ./log/wo-category-service.log
+  file.max-history: 10
+  file.max-size: 10MB
+  level:
+    ROOT: info
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan}%clr(:%-5L){magenta} %16X{traceId}:%16X{spanId} %clr(:){faint} %m%n%wEx"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } --- [%t] %-40.40logger{39}:%-5L %16X{traceId}:%16X{spanId} : %m%n%wEx"
+opentracing:
+  jaeger:
+    udp-sender:
+      host: localhost
+      port: 6831
+    log-spans: false
+    probabilistic-sampler:
+      sampling-rate: 0.01
+
+application:
+  ftp:
+    server: 10.240.232.25
+    port: 21
+    user: 429585a63e5e23f3a5f7c64a0ddd5f29
+    pass: d7d9574824a43ad32007b26cd1957efd
+    folder: gnoc2/cr-upload
+  upload:
+    folder: /data2/CR
+  temp:
+    folder: ./cr-temp
+  ws:
+    cms_ws_url: http://10.240.202.33:8333/CRGNOCServer/
+    cms_ws_targeNameSpace: http://service.maintenance.gnoc.viettel.com/
+    mr_ws_url: http://10.240.202.33:8333/MRGNOCServer/
+    mr_ws_targeNameSpace: http://service.maintenance.gnoc.viettel.com/
+    wfm_ws_url: http://10.240.202.33:8338/WFMServerT3/
+    wfm_ws_targeNameSpace: http://service.wfm.gnoc.viettel.com/
+    sr_ws_url: http://10.240.202.33:8333/SRServer
+    sr_ws_targeNameSpace: http://service.sr.viettel.com/
+    timeOut: 60000
+    WSPOOL:
+      maxTotal: 20
+    connectTimeoutNTMS: 300000
+    recvTimeoutNTMS: 300000
+    #vipa_userService=vipa
+    vipa_userService: vVvODSn60V0pwQqD08gBNidzcGsue4T6dDecSQtpLsE=
+    #vipa_passService=Vipa@123
+    vipa_passService: 1kL1SnviytvJn+wQLvwbO3sEFsketAiTpJrEtPTOnIQ=
+    vipa_saltService: vipa
+    service_url_vipadd: http://10.240.202.12:8668/MSChangeProcess/WSForGNOC?wsdl
+    service_url_vipaip: http://10.240.202.49:8576/IPChangeProcess/WSForGNOC?wsdl
+    service_url_tdtt: http://10.60.5.6:8870/AAM/tdttService?wsdl
+    ##tdtt_userService=tdtt
+    tdtt_userService: FFVxvcVGaBRxhHajTZumHy/6JhIox8U9Ubb3cIHp4xM=
+    ##tdtt_passService=tdtt_vtnet$%^
+    tdtt_passService: LkcK5/YS4yI3WBj8wh+PWdNVv8uPlKuT1s0Fvkg0GQAR3Mw3BfuWQddWXqEkTuSfcrajSOLeGesld14OJ5dkaQ==
+    tdtt_saltService: tdtt
+    service_url_chat: http://10.60.101.191:8087/SmartService/smartOfficeService?wsdl
+    risk_ws_url: http://10.60.131.21:8883/RISKServer/
+    risk_ws_targeNameSpace: http://service.risk.gnoc.viettel.com/
+    gnoc_ws_url: http://10.30.137.82:9009/CommonGNOC/
+    gnoc_ws_targeNameSpace: http://service.common.gnoc.viettel.com/
+    service_url_nims: http://10.60.5.245:9008/NIMS_Infra_Service/InfraWS?wsdl
+    nocprov4_url: http://10.240.202.152:8086/Nocpro_Webservice/NocproWebservice?wsdl
+    iim_url: http://10.60.129.245:8888/IIMSERVICES/IimServices?wsdl
+    service_url_security: http://192.168.131.50:9980/SecurityProvideService/SecurityProvideService?wsdl
+    service_url_trace_phone: http://192.168.131.50:8084/SPMService/SPMProvide?wsdl
+    nocprov4_user: nocproV4
+    nocprov4_pass: Gmkk3q+aCN0ux4jnqeqRPCI3mw5Jj8795I39g7MDjJxK11yt0+RU6+hjxUEyuLqaoJnLLpUWi6Y5gyuCnx1L8w==
+    nocprov4_salt: NOCPRO
+    user_ws: t2PEDleyKBSfBkOYABmNGQ==
+    pass_ws: K4m7HMHP71MdfZQQzuatsPWeHPNaQtRG
+    gate_ws_url: http://10.240.202.126:8088/WSGatePro/UpdateECRForGNOCService?wsdl
+    gate_user: be1d4fd7dcbecfe7
+    gate_pass: be1d4fd7dcbecfe7
+    nocpro_url: http://10.60.7.126:9010/Nocpro_Webservice/GnocWebservice?wsdl
+  conf:
+    user_service: Wcu6LMilZzEFLtq1/LNEeLMrMMt6QXCgIeUO6LRfNFM=
+    pass_service: wR5brO85ifm2kdenaPT2eQqdEAyiaVb0NLDJZ5l9cKg=
+    salt_service: gnoc
+    user_name_nims_2: 79f81599dee3a5cd573b081525541740
+    password_nims_2: 79f81599dee3a5cd573b081525541740
+    iim_nationCodes: VNM:VIETTEL
+    security_userService: v7abcopnWbWV4QJ4kVgvJ5WT1kBtgefm6oX+hrCvv1xytqNI4t4Z6yV3Xg4nl2Rp
+    security_passService: v7abcopnWbWV4QJ4kVgvJ5WT1kBtgefm6oX+hrCvv1xytqNI4t4Z6yV3Xg4nl2Rp
+    security_saltService: security
+    #trace_phone_username=spm
+    trace_phone_username: jT9jVQWGTDGFbg9RYAb0+4JOeRhl1Eao/RFZ5q8ThUI=
+    #trace_phone_password=SpM#2o17
+    trace_phone_password: PUbZJEDwghzN0+AFOXJCi0INHLvMhpqOY9813XPDQaQ=
+    trace_phone_salt: trace
+    WO_FAIL_CODE: WO_FAIL
+    cr_resolve_success: 39
+  cmc_config:
+    user_service: Wcu6LMilZzEFLtq1/LNEeLMrMMt6QXCgIeUO6LRfNFM=
+    pass_service: wR5brO85ifm2kdenaPT2eQqdEAyiaVb0NLDJZ5l9cKg=
+    salt_service: gnoc
+    cr_close_CrReturnCodeId: 27
+    cr_close_ActionReturnCodeId: 42
+    system_user_id: 256066
+    system_unit_id: 436117
+    system_user_name: system
+    wo_close_status_code: 8

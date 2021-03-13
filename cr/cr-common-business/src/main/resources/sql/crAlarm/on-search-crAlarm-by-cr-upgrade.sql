@@ -1,0 +1,21 @@
+SELECT id,
+       cr_id crId,
+       TO_CHAR(CREATE_DATE, 'dd/mm/yyyy hh24:mi:ss') createDate,
+       FAULT_SRC faultSrc,
+       FAULT_ID faultId,
+       FAULT_NAME faultName,
+       FAULT_GROUP_ID faultGroupId,
+       FAULT_GROUP_NAME faultGroupName,
+       DEVICE_TYPE_ID deviceTypeId,
+       DEVICE_TYPE_CODE deviceTypeCode,
+       VENDOR_CODE vendorCode,
+       VENDOR_NAME vendorName,
+       NATION_CODE nationCode,
+       MODULE_CODE moduleCode,
+       MODULE_NAME moduleName,
+       KEYWORD keyword,
+       FAULT_LEVEL_ID faultLevelId,
+       FAULT_LEVEL_CODE faultLevelCode,
+       NUMBER_OCCURENCES numberOccurences
+FROM CR_ALARM
+WHERE 1=1

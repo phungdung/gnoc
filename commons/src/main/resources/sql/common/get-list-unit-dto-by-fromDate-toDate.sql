@@ -1,0 +1,25 @@
+SELECT u.UNIT_ID unitId,
+u.UNIT_NAME unitName,
+u.UNIT_CODE unitCode,
+u.PARENT_UNIT_ID parentUnitId,
+u.DESCRIPTION description,
+u.STATUS status,
+u.UNIT_TYPE unitType,
+u.UNIT_LEVEL unitLevel,
+u.LOCATION_ID locationId,
+u.IS_NOC isNoc,
+u.TIME_ZONE timeZone,
+u.IS_COMMITTEE isCommittee,
+TO_CHAR(u.UPDATE_TIME,'dd/MM/yyyy HH24:MI:ss') updateTime,
+u.SMS_GATEWAY_ID smsGatewayId,
+u.IPCC_SERVICE_ID ipccServiceId,
+u.NATION_CODE nationCode,
+u.NATION_ID nationId,
+u.MOBILE mobile,
+u.ROLE_TYPE roleType,
+u.EMAIL email,
+l.location_code locationCode,
+l.location_name locationName
+FROM common_gnoc.unit u,common_gnoc.cat_location l
+WHERE u.location_id = l.location_id(+)
+

@@ -1,0 +1,25 @@
+SELECT MR.SCHEDULE_ID scheduleId,
+  MR.MARKET_CODE marketCode,
+  MR.REGION region,
+  MR.ARRAY_CODE arrayCode,
+  MR.DEVICE_TYPE deviceType,
+  MR.DEVICE_NAME deviceName,
+  MR.DEVICE_CODE deviceCode,
+  MR.DEVICE_ID deviceId,
+  MR.IP_NODE ipNode,
+  MR.VENDOR vendor,
+  MR.BD_TYPE bdType,
+  MR.STATION_CODE stationCode,
+  MR.GROUP_CODE groupCode,
+  MR.NEXT_DATE nextDate,
+  MR.LAST_DATE lastDate,
+  MR.MR_ID mrId,
+  MR.WO_ID woId,
+  MR.NOTE note,
+  MR.PROCEDURE_ID procedureId,
+  MR.NEXT_DATE_MODIFY nextDateModify,
+  mr.IP_SERVER ipServer,
+  MR.UPDATE_DATE updatedDate
+FROM OPEN_PM.MR_SCHEDULE_IT_HARD mr
+WHERE 1     =1
+AND MR.SCHEDULE_ID IN (:scheduleIds)

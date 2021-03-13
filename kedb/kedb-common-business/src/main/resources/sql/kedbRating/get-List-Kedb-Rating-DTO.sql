@@ -1,0 +1,2 @@
+SELECT  kr.*
+FROM    KEDB_RATING kr

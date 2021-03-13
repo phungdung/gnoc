@@ -1,0 +1,6 @@
+---
+- name: Deploy pre production environment
+  hosts: pre_production_servers
+  gather_facts: false
+  roles:
+    - { role: deploy-pre-production }

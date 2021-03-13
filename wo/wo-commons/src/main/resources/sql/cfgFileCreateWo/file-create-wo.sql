@@ -1,0 +1,8 @@
+Select
+c.CFG_FILE_CREATE_WO_ID
+, c.WO_TYPE_ID
+, c.FILE_NAME
+, c.FILE_PATH
+, c.REQUIRED
+From CFG_FILE_CREATE_WO c
+where 1=1

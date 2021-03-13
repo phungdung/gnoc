@@ -1,0 +1,24 @@
+<script type="text/javascript">
+    var ip = self.location.hostname;
+    const res = `
+<a href="http://${ip}:8061">Eureka Dashboard</a>
+<p />
+<a href="http://${ip}:9002">Portainer Dashboard - admin/password</a>
+<p />
+<a href="http://${ip}:8060">Gateway Service</a>
+<p />
+<a href="http://${ip}:8001">Grafana Dashboard - admin/admin</a>
+<p />
+<a href="http://${ip}:5601">Kibana Dashboard</a>
+<p />
+<a href="http://${ip}:9601">Kibana Dashboard Pre-Production</a>
+<p />
+<a href="http://${ip}:9090">Prometheus Dashboard</a>
+<p />
+<a href="http://${ip}:6969">Trampoline Dashboard</a>
+<p />
+<a href="http://${ip}:16686">Jaeger Dashboard</a>
+<p />
+    `;
+    document.write(res);
+</script>

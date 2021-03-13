@@ -1,0 +1,30 @@
+SELECT a.CR_PROCESS_ID            AS crProcessId,
+  a.CR_PROCESS_CODE               AS crProcessCode,
+  a.CR_PROCESS_NAME               AS crProcessName,
+  a.DESCRIPTION                   AS description,
+  a.IMPACT_SEGMENT_ID             AS impactSegmentId,
+  a.DEVICE_TYPE_ID                AS deviceTypeId,
+  a.SUBCATEGORY_ID                AS subcategoryId,
+  a.RISK_LEVEL                    AS riskLevel,
+  a.IMPACT_TYPE                   AS impactType,
+  a.CR_TYPE_ID                    AS crTypeId,
+  a.IS_ACTIVE                     AS isActive,
+  a.PARENT_ID                     AS parentId,
+  a.IMPACT_CHARACTERISTIC         AS impactCharacteristic,
+  a.OTHER_DEPT                    AS otherDept,
+  a.REQUIRE_MOP                   AS requireMop,
+  a.REQUIRE_FILE_LOG              AS requireFileLog,
+  a.REQUIRE_FILE_TEST             AS requireFileTest,
+  a.APPROVAL_LEVEL                AS approvalLevel,
+  a.CR_PROCESS_INDEX              AS crProcessIndex,
+  a.CLOSE_CR_WHEN_RESOLVE_SUCCESS AS closeCrWhenResolveSuccess,
+  a.IS_VMSA_ACTIVE_CELL_PROCESS   AS isVmsaActiveCellProcess,
+  a.VMSA_ACTIVE_CELL_PROCESS_KEY  AS vmsaActiveCellProcessKey,
+  a.IS_LANE_IMPACT                AS isLaneImpact,
+  a.REQUIRE_APPROVE               AS requireApprove,
+  CONNECT_BY_ISLEAF               AS isLeaf,
+  LEVEL                           AS crProcessLevel
+FROM OPEN_PM.CR_PROCESS a
+WHERE a.CR_PROCESS_CODE = :crProcessCode
+  START WITH a.PARENT_ID IS NULL
+  CONNECT BY prior a.CR_PROCESS_ID = a.PARENT_ID

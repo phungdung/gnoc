@@ -1,0 +1,7 @@
+SELECT
+t1.CR_ACTION_CODE_ID crActionCodeId,
+t1.CR_ACTION_CODE crActionCode,
+t1.CR_ACTION_CODE_TITTLE crActionCodeTittle,
+t1.IS_ACTIVE isActive,
+t1.IS_EDITABLE isEditable
+FROM OPEN_PM.CR_ACTION_CODE t1 WHERE 1 = 1

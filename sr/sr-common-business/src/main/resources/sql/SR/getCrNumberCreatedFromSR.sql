@@ -1,0 +1,10 @@
+SELECT t1.sr_id srId,
+  t3.cr_number crNumber
+FROM
+  (SELECT sr_id FROM OPEN_PM.SR WHERE 1=1 fromDate toDate
+  ) t1
+INNER JOIN OPEN_PM.CR_CREATED_FROM_OTHER_SYS t2
+ON t2.SYSTEM_ID  = 5
+AND t2.OBJECT_ID = t1.SR_ID
+INNER JOIN OPEN_PM.CR t3
+ON t2.CR_ID = t3.CR_ID

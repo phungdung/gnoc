@@ -1,0 +1,24 @@
+SELECT T1.SR_ID srId,
+  T1.SR_CODE srCode,
+  T1.TITLE title,
+  T1.STATUS status,
+  T2.CONFIG_NAME statusName,
+  T1.CREATED_USER createdUser,
+  TO_CHAR(T1.SEND_DATE,'dd/MM/yyyy HH24:mi:ss') sendDate,
+  TO_CHAR(T1.START_TIME,'dd/MM/yyyy HH24:mi:ss') startTime,
+  TO_CHAR(T1.END_TIME,'dd/MM/yyyy HH24:mi:ss') endTime,
+  T1.SR_USER srUser,
+  T1.SR_UNIT srUnit,
+  TO_CHAR(T1.CREATED_TIME,'dd/MM/yyyy HH24:mi:ss') createdTime,
+  TO_CHAR(T1.UPDATED_TIME,'dd/MM/yyyy HH24:mi:ss') updatedTime,
+  T4.UNIT_NAME unitName,
+  T3.USER_ID userId
+FROM OPEN_PM.SR T1
+LEFT JOIN COMMON_GNOC.UNIT T4
+ON T1.SR_UNIT = T4.UNIT_ID
+LEFT JOIN COMMON_GNOC.USERS T3
+ON LOWER(T3.USERNAME)  = LOWER(T1.CREATED_USER)
+LEFT JOIN OPEN_PM.SR_CONFIG T2
+ON T2.CONFIG_CODE  = T1.STATUS
+AND T2.CONFIG_GROUP='STATUS'
+WHERE 1            = 1

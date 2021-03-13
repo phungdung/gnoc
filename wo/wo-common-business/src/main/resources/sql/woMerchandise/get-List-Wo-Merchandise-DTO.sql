@@ -1,0 +1,3 @@
+SELECT  m.*
+FROM    WO_MERCHANDISE m
+WHERE   1 = 1

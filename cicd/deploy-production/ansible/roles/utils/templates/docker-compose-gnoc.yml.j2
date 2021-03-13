@@ -1,0 +1,15 @@
+version: '3.2'
+
+volumes:
+    vsmart_logs: {}
+
+services:
+{% for service_name, version in map_module_version.iteritems() %}
+  {{service_name}}:
+      build:
+        context: ../{{service_name}}
+        args:
+          SERVICE_VERSION: {{version}}
+          JDK_BASE_IMAGE: {{JDK_BASE_IMAGE}}
+      image: "{{IMAGE_REGISTRY_URL}}/vsmart/{{IMAGE_TYPE}}/{{service_name}}:{{version}}"
+{% endfor %}

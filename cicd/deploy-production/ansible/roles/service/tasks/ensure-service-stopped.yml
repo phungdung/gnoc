@@ -1,0 +1,23 @@
+---
+- name: Check if service docker compose is exists
+  stat:
+    path: "{{working_dir}}/{{service_name}}.yml"
+  register: service_docker_compose_details
+
+- name: Stop existing old vsmart services stack if exists
+  shell:
+    cmd: "docker-compose -p vsmart -f {{service_name}}.yml down --rmi all --timeout {{service_shutdown_timeout}}"
+    chdir: "{{working_dir}}"
+  when: service_docker_compose_details.stat.exists == True
+  ignore_errors: yes
+  register: vsmart_down_output
+
+- debug:
+    msg: "{{vsmart_down_output}}"
+  when: service_docker_compose_details.stat.exists == True
+
+- name: Delete old service docker compose file
+  file:
+    state: absent
+    path: "{{working_dir}}/{{service_name}}.yml"
+  when: service_docker_compose_details.stat.exists == True

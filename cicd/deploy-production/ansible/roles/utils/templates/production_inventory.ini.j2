@@ -1,0 +1,31 @@
+[all:vars]
+ansible_connection=ssh
+working_dir={{ working_dir }}
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+[local]
+localhost ansible_connection=local
+
+[vsmart-service:children]
+{% for service in SERVICE_LIST %}
+{{ service }}
+{% endfor %}
+
+{% for service in SERVICE_LIST %}
+{% if service != 'discovery-service' %}
+[{{ service }}]
+{% for service_server_ip in VSMART_SERVER_LIST[service] %}
+{{ service_server_ip }} ansible_host={{ service_server_ip }}
+{% endfor %}
+{% else %}
+[{{ service }}]
+{% for eureka_server_info in DISCOVERY_INVENTORY_CONFIG %}
+{{eureka_server_info['eureka_ip']}} ansible_host={{eureka_server_info['eureka_ip']}}  eureka_profile={{eureka_server_info['eureka_profile']}}
+{% endfor %}
+{% endif %}
+
+[{{ service }}:vars]
+service_name={{service}}
+service_port={{SERVICE_PORT_LIST[service]}}
+
+{% endfor %}

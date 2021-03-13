@@ -1,0 +1,16 @@
+SELECT
+  t1.ID_DAYOFF idDayOff,
+  t1.EMP_ID empId,
+  t1.EMP_UNIT empUnit,
+  t1.EMP_USERNAME empUsername,
+  t1.DAYOFF dayOff,
+  t1.VACATION vacation ,
+  t3.UNIT_ID unitId,
+  t3.UNIT_NAME unitName,
+  t3.UNIT_CODE unitCode
+FROM COMMON_GNOC.EMPLOYEE_DAYOFF t1
+INNER JOIN COMMON_GNOC.USERS t2
+ON t1.EMP_ID = t2.USER_ID
+LEFT JOIN COMMON_GNOC.UNIT t3
+ON t1.EMP_UNIT = t3.UNIT_ID
+WHERE 1        = 1

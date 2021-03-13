@@ -1,0 +1,71 @@
+version: '3.2'
+
+services:
+  configuration-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/configuration-service:${TAG}"
+  discovery-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/discovery-service:${TAG}"
+  gateway-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/gateway-service:${TAG}"
+  hazelcast-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/hazelcast-service:${TAG}"
+  authen-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/authen-service:${TAG}"
+  od-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/od-service:${TAG}"
+  od-category-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/od-category-service:${TAG}"
+  od-oudside-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/od-outside-service:${TAG}"
+  pt-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/pt-service:${TAG}"
+  pt-category-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/pt-category-service${TAG}"
+  kedb-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/kedb-service${TAG}"
+  pt-oudside-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/pt-oudside-service:${TAG}"
+  kedb-oudside-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/kedb-oudside-service:${TAG}"
+  tt-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/tt-service:${TAG}"
+  tt-category-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/tt-category-service:${TAG}"
+  tt-outside-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/tt-outside-service:${TAG}"
+  wo-outside-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/wo-outside-service:${TAG}"
+  wo-vsmart-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/wo-vsmart-service:${TAG}"
+  wo-category-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/wo-category-service:${TAG}"
+  wo-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/wo-service:${TAG}"
+  cr-category-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/cr-category-service:${TAG}"
+  cr-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/cr-service:${TAG}"
+  cr-outside-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/cr-outside-service:${TAG}"
+  sr-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/sr-service:${TAG}"
+  sr-category-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/sr-category-service:${TAG}"
+  sr-oudside-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/sr-outside-service:${TAG}"
+  common-stream-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/common-stream-service${TAG}"
+  mr-category-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/mr-category-service:${TAG}"
+  mr-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/mr-service:${TAG}"
+  mr-outside-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/mr-outside-service:${TAG}"
+  rick-category-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/rick-category-service:${TAG}"
+  rick-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/rick-service:${TAG}"
+  common-outside-service:
+    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/rick-service:${TAG}"
+#  documentation-service:
+#    image: "${DOCKER_STAGING_REGISTRY}/${PROJECT_CODE}/${IMAGE_TYPE}/documentation-service:${TAG}"

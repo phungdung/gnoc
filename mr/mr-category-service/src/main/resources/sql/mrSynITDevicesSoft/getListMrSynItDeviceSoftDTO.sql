@@ -1,0 +1,115 @@
+WITH list_language_exchange AS
+  (SELECT cat.ITEM_VALUE,
+    cat.ITEM_NAME,
+    cat.ITEM_CODE,
+    LE.BUSSINESS_ID,
+    LE.LEE_VALUE,
+    LE.LEE_LOCALE
+  FROM
+    (SELECT *
+    FROM COMMON_GNOC.CAT_ITEM
+    WHERE CATEGORY_ID =
+      (SELECT CATEGORY_ID
+      FROM COMMON_GNOC.CATEGORY
+      WHERE CATEGORY_CODE= 'MR_SUBCATEGORY'
+      AND EDITABLE       = 1
+      )
+    ) cat
+  LEFT JOIN COMMON_GNOC.LANGUAGE_EXCHANGE LE
+  ON LE.BUSSINESS_ID       = cat.ITEM_ID
+  AND LE.APPLIED_SYSTEM    = 1
+  AND LE.APPLIED_BUSSINESS = 3
+  AND LE.LEE_LOCALE        = :p_leeLocale
+  )
+SELECT
+  T1.ID id,
+  T1.OBJECT_ID objectId ,
+  T1.MARKET_CODE marketCode,
+  L1.LOCATION_NAME marketName,
+  T1.REGION_SOFT regionSoft,
+  T1.REGION_HARD regionHard,
+  T1.CREATE_USER_SOFT createUserSoft,
+  T1.CREATE_USER_HARD createUserHard,
+  T1.IP_NODE ipNode,
+  T1.NODE_AFFECTED nodeAffected,
+  T1.CD_ID cdId,
+  T1.MR_HARD mrHard,
+  T1.MR_SOFT mrSoft,
+  T1.ARRAY_CODE arrayCode,
+  CASE
+    WHEN llex.LEE_VALUE IS NULL
+    THEN llex.ITEM_NAME
+    ELSE llex.LEE_VALUE
+  END arrayCodeStr,
+  T1.DEVICE_TYPE deviceType,
+  T1.GROUP_CODE groupCode,
+  T1.UPDATE_DATE updateDate,
+  TO_CHAR(T1.UPDATE_DATE, 'dd/MM/yyyy') updateDateStr,
+  T1.UPDATE_USER updateUser,
+  T1.OBJECT_NAME objectName,
+  T1.OBJECT_CODE objectCode,
+  T1.USER_MR_HARD userMrHard,
+  T1.IS_COMPLETE_1M isComplete1m,
+  T1.IS_COMPLETE_3M isComplete3m,
+  T1.IS_COMPLETE_6M isComplete6m,
+  T1.IS_COMPLETE_12M isComplete12m,
+  T1.IS_COMPLETE_SOFT isCompleteSoft,
+  T1.LAST_DATE_SOFT lastDateSoft,
+  T1.LAST_DATE_1M lastDate1m,
+  T1.LAST_DATE_3M lastDate3m,
+  T1.LAST_DATE_6M lastDate6m,
+  T1.LAST_DATE_12M lastDate12m,
+  TO_CHAR(T1.LAST_DATE_SOFT, 'dd/MM/yyyy') lastDateSoftStr,
+  TO_CHAR(T1.LAST_DATE_1M, 'dd/MM/yyyy') lastDate1mStr,
+  TO_CHAR(T1.LAST_DATE_3M, 'dd/MM/yyyy') lastDate3mStr,
+  TO_CHAR(T1.LAST_DATE_6M, 'dd/MM/yyyy') lastDate6mStr,
+  TO_CHAR(T1.LAST_DATE_12M, 'dd/MM/yyyy') lastDate12mStr,
+  T1.VENDOR vendor,
+  T1.MR_CONFIRM_HARD mrConfirmHard,
+  T1.MR_CONFIRM_SOFT mrConfirmSoft,
+  C.CONFIG_NAME mrConfirmSoftDisplay,
+  T1.STATUS status,
+  T1.NOTES notes,
+  T1.SYN_DATE synDate,
+  TO_CHAR(T1.SYN_DATE,'dd/MM/yyyy') synDateStr,
+  T1.DB db,
+  T1.UD ud,
+  T1.STATION station,
+  T1.LEVEL_IMPORTANT levelImportant,
+  T1.BO_UNIT boUnit,
+  T6.UNIT_NAME boUnitName,
+  T1.APPROVE_STATUS approveStatus,
+  T1.APPROVE_REASON approveReason,
+  T1.UP_TIME upTime,
+  T1.STATUS_IIM statusIIM,
+  T3.IMPLEMENT_UNIT implementUnit,
+  T3.CHECKING_UNIT checkingUnit,
+  T4.UNIT_NAME implementUnitName,
+  T5.UNIT_NAME checkingUnitName,
+  W.WO_GROUP_NAME cdIdName,
+  T1.IS_RUN_MOP isRunMop,
+  T1.MARKET_CODE_IIM marketCodeIIM
+FROM
+  OPEN_PM.MR_SYN_IT_DEVICES T1
+LEFT JOIN COMMON_GNOC.CAT_LOCATION L1
+ON TO_CHAR(T1.MARKET_CODE) = TO_CHAR(L1.LOCATION_ID)
+LEFT JOIN list_language_exchange llex
+ON T1.ARRAY_CODE = llex.ITEM_CODE
+LEFT JOIN OPEN_PM.MR_CFG_CR_IMPL_UNIT T3
+ON
+  T1.DEVICE_TYPE = T3.DEVICE_TYPE_ID
+AND T1.MARKET_CODE   = T3.MARKET_CODE
+AND T1.REGION_SOFT = T3.REGION
+LEFT JOIN COMMON_GNOC.UNIT T4
+ON
+  T3.IMPLEMENT_UNIT = T4.UNIT_ID
+LEFT JOIN COMMON_GNOC.UNIT T5
+ON
+  T3.CHECKING_UNIT = T5.UNIT_ID
+LEFT JOIN WFM.wo_cd_group w
+  ON T1.CD_ID       = w.WO_GROUP_ID
+LEFT Join OPEN_PM.MR_CONFIG c
+  On T1.MR_CONFIRM_SOFT = c.CONFIG_CODE and c.CONFIG_GROUP = 'LY_DO_KO_BD'
+LEFT JOIN COMMON_GNOC.UNIT T6
+  ON t1.BO_UNIT = T6.UNIT_ID
+WHERE 1 = 1

@@ -1,0 +1,72 @@
+---
+- name: Generate secret environment file
+  hosts: local
+  gather_facts: false
+  roles:
+    - { role: utils,
+        utils_action: gen-secret-env-file,
+        tags: gen-secret-env-file,
+        when: use_production_utils | bool }
+
+- name: Generate heat stack template
+  hosts: local
+  gather_facts: false
+  roles:
+    - { role: utils,
+        utils_action: gen-heat-stack-template,
+        tags: gen-heat-stack-template,
+        when: use_production_utils | bool }
+
+- name: Generate heat stack template
+  hosts: local
+  gather_facts: false
+  roles:
+    - { role: utils,
+        utils_action: gen-heat-stack-template,
+        tags: gen-heat-stack-template,
+        when: use_production_utils | bool }
+
+- name: Generate production inventory file
+  hosts: local
+  gather_facts: false
+  roles:
+    - { role: utils,
+        utils_action: gen-production-inventory-file,
+        tags: gen-production-inventory-file,
+        when: use_production_utils | bool }
+
+#- name: Generate pre-production inventory file
+#  hosts: local
+#  gather_facts: false
+#  roles:
+#    - { role: utils,
+#        utils_action: gen-pre-production-inventory-file,
+#        tags: gen-pre-production-inventory-file,
+#        when: use_production_utils | bool }
+
+- name: Generate deploy production playbook file
+  hosts: local
+  gather_facts: false
+  roles:
+    - { role: utils,
+        utils_action: gen-deploy-production-playbook,
+        tags: gen-deploy-production-playbook,
+        when: use_production_utils | bool }
+
+- name: Generate docker compose gnoc file
+  hosts: local
+  gather_facts: false
+  roles:
+    - { role: utils,
+        utils_action: gen-docker-compose-gnoc,
+        tags: gen-docker-compose-gnoc,
+        when: use_production_utils | bool }
+
+- name: Generate playbook for delete old image
+  hosts: local
+  gather_facts: false
+  roles:
+    - { role: utils,
+        utils_action: gen-playbook-delete-image,
+        tags: gen-playbook-delete-image,
+        when: use_production_utils | bool }

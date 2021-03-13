@@ -1,0 +1,22 @@
+server:
+  port: 8061
+
+eureka:
+  datacenter: gnoc cloud
+  environment: dev
+  instance:
+    hostname: localhost
+    appname: gnoc
+    prefer-ip-address: true
+  client:
+    registerWithEureka: false
+    fetchRegistry: false
+    serviceUrl:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+zuul.ignored-headers: Access-Control-Allow-Origin
+logging:
+  file: ./log/discovery-service.log
+  file.max-history: 10
+  file.max-size: 10MB
+  level:
+    ROOT: info

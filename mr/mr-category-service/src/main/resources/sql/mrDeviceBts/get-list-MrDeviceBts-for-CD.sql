@@ -1,0 +1,21 @@
+SELECT T1.DEVICE_ID deviceId,
+  T1.MARKET_CODE marketCode,
+  T1.PROVINCE_CODE provinceCode,
+  T1.STATION_CODE stationCode,
+  T1.DEVICE_TYPE deviceType,
+  T1.USER_MANAGER userManager,
+  T1.UPDATE_USER updateUser,
+  T1.SERIAL serial,
+  T1.FUEL_TYPE fuelType,
+  T1.POWER power,
+  TO_CHAR(T1.MAINTENANCE_TIME, 'DD/MM/YYYY') maintenanceTime,
+  T1.OPERATION_HOUR operationHour,
+  T1.AREA_CODE areaCode,
+  T1.PUT_STATUS putStatus,
+  T1.IN_KTTS inKTTS,
+  T1.PRODUCER producer,
+  T1.OPERATION_HOUR_LAST_UPDATE operationHourLastUpdate,
+  T1.COUNTRY_NAME countryName,
+  T1.PROVINCE_NAME provinceName
+FROM MR_DEVICE_BTS T1
+WHERE 1=1

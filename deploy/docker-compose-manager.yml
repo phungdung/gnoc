@@ -1,0 +1,194 @@
+version: '3.2'
+
+volumes:
+  prometheus_data: {}
+  grafana_data: {}
+  gnoc_logs: {}
+  gnoc_log_pos: {}
+  portainer_data: {}
+  es_data: {}
+
+networks:
+  monitor:
+
+services:
+  trampoline:
+    build:
+      context: trampoline
+      args:
+        IMAGE_REGISTRY_URL: ${IMAGE_REGISTRY_URL}
+    image: ${IMAGE_REGISTRY_URL}/gnoc/trampoline_spring
+    container_name: gnoc-trampoline
+    ports: ['6969:8080']
+    networks: [monitor]
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+  jaeger:
+    image: ${IMAGE_REGISTRY_URL}/jaegertracing/all-in-one:latest
+    container_name: gnoc-jaeger
+    ports: ['16686:16686', '6831:6831/udp']
+    networks: [monitor]
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+  nginx:
+    image: ${IMAGE_REGISTRY_URL}/nginx:stable-alpine
+    container_name: gnoc-nginx
+    volumes: ['./nginx/:/usr/share/nginx/html:ro']
+    ports: ['80:80']
+    networks: [monitor]
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+
+  prometheus:
+    image: ${IMAGE_REGISTRY_URL}/prom/prometheus:latest
+    container_name: gnoc-prometheus
+    volumes:
+      - ./prom/:/etc/prometheus/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    depends_on:
+      - node-exporter
+      - cadvisor
+    ports: ['9090:9090']
+    networks: [monitor]
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+  node-exporter:
+    image: ${IMAGE_REGISTRY_URL}/prom/node-exporter:latest
+    container_name: gnoc-node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+    ports: ['9100:9100']
+    networks: [monitor]
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+  cadvisor:
+    image: ${IMAGE_REGISTRY_URL}/google/cadvisor:latest
+    container_name: gnoc-cadvisor
+    volumes:
+      - /:/rootfs:rshared
+      - /var/run:/var/run:rshared
+      - /sys:/sys:rshared
+      - /var/lib/docker/:/var/lib/docker:rshared
+      - /cgroup:/cgroup:rshared
+    ports: ['8002:8080']
+    networks: [monitor]
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+  grafana:
+    image: ${IMAGE_REGISTRY_URL}/grafana/grafana:latest
+    user: "104"
+    container_name: gnoc-grafana
+    depends_on:
+      - prometheus
+    ports: ['8001:3000']
+    env_file: ['./grafana/config.monitoring']
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/config.ini:/etc/grafana/grafana.ini
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/default-dashboards:/var/lib/grafana/dashboards
+    networks: [monitor]
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+  elasticsearch:
+    image: ${IMAGE_REGISTRY_URL}/elasticsearch:6.4.0
+    container_name: gnoc-elasticsearch
+    ports: ['9200:9200']
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+      - ./efk/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    networks: [monitor]
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+  fluentd:
+    image: ${IMAGE_REGISTRY_URL}/cicd-f5/fluentd-service:latest
+    container_name: gnoc-fluentd
+    ports: ['24224:24224']
+    depends_on:
+      - elasticsearch
+    volumes:
+      - ./fluentd/:/fluentd/etc/
+      - gnoc_logs:/gnoc
+      - gnoc_log_pos:/fluentd/log/
+    networks: [monitor]
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+  kibana:
+    image: ${IMAGE_REGISTRY_URL}/kibana:6.4.0
+    container_name: gnoc-kibana
+    ports: ['5601:5601']
+    volumes:
+      - ./efk/kibana.yml:/usr/share/kibana/config/kibana.yml
+    networks: [monitor]
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+  apm-server:
+    image: ${IMAGE_REGISTRY_URL}/apm-server:6.4.0
+    container_name: gnoc-apm
+    ports: ['8200:8200']
+    volumes:
+      - ./efk/apm-server.yml:/usr/share/apm-server/apm-server.yml
+    depends_on:
+      - elasticsearch
+      - kibana
+    networks: [monitor]
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+  portainer:
+    image: ${IMAGE_REGISTRY_URL}/portainer/portainer:latest
+    container_name: gnoc-portainer
+    ports: ['9002:9000']
+    command:
+      - '--external-endpoints=/tmp/endpoints.json'
+      - '--admin-password-file=/tmp/portainer-secret'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+      - ./portainer/portainer-secret:/tmp/portainer-secret
+      - ./portainer/endpoints.json:/tmp/endpoints.json
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always
+
+  cron:
+    image: ${IMAGE_REGISTRY_URL}/cron-clean-old-log:latest
+    container_name: gnoc-cron-clean-old-log
+    volumes:
+      - gnoc_logs:/gnoc
+    environment:
+      TZ: "Asia/Ho_Chi_Minh"
+    restart: always

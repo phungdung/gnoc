@@ -1,0 +1,127 @@
+WITH lst_lang AS
+  (SELECT
+    CASE
+      WHEN l.LEE_VALUE IS NULL
+      THEN c.ITEM_NAME
+      ELSE l.LEE_VALUE
+    END LEE_VALUE,
+    c.ITEM_CODE ITEM_CODE
+  FROM COMMON_GNOC.CAT_ITEM c
+  LEFT JOIN COMMON_GNOC.LANGUAGE_EXCHANGE l
+  ON c.ITEM_ID         = l.BUSSINESS_ID
+  AND APPLIED_BUSSINESS=3
+  AND l.APPLIED_SYSTEM =1
+  AND l.LEE_LOCALE     =:lee_Locale
+  WHERE c.STATUS       = 1
+  AND c.CATEGORY_ID    =
+    (SELECT CATEGORY_ID
+    FROM COMMON_GNOC.CATEGORY
+    WHERE CATEGORY_CODE='MR_SUBCATEGORY'
+    AND STATUS         = 1
+    )
+  ORDER BY position,
+    NLSSORT(ITEM_NAME,'NLS_SORT=vietnamese' )
+  )
+SELECT MR.SCHEDULE_ID scheduleId,
+  MR.MARKET_CODE marketId,
+  MR.MARKET_CODE marketCode,
+  CL.LOCATION_NAME marketName,
+  CL.LOCATION_NAME nationName,
+  MR.REGION region,
+  MR.ARRAY_CODE arrayCode,
+  CASE
+    WHEN ll.LEE_VALUE IS NULL
+    THEN MR.ARRAY_CODE
+    ELSE TO_CHAR(ll.LEE_VALUE)
+  END arrayName,
+  MR.DEVICE_TYPE deviceType,
+  MR.DEVICE_NAME deviceName,
+  MR.DEVICE_CODE deviceCode,
+  MR.DEVICE_ID deviceId,
+  MR.IP_NODE ipNode,
+  MR.VENDOR vendor,
+  MR.BD_TYPE bdType,
+  MR.STATION_CODE stationCode,
+  DEV.NODE_AFFECTED nodeAffected,
+  dev.OBJECT_ID objectId,
+  MR.GROUP_CODE groupCode,
+  TO_CHAR(MR.NEXT_DATE,'dd/MM/yyyy') nextDate,
+  TO_CHAR(MR.LAST_DATE,'dd/MM/yyyy') lastDate,
+  MR.MR_ID mrId,
+  MR.CR_ID crId,
+  SOF.DESCRIPTION_CR descriptionCr,
+  unit.IMPLEMENT_UNIT implementUnitId,
+  u1.UNIT_NAME implementUnitName,
+  unit.CHECKING_UNIT checkingUnitId,
+  u2.UNIT_NAME checkingUnitName,
+  SOF.CYCLE cycle,
+  SOF.CYCLE_TYPE cycleType,
+  MR.NOTE,
+  dev.UD ud,
+  dev.DB db,
+  DEV.BO_UNIT boUnit,
+  dev.APPROVE_STATUS approveStatus,
+  sof.PROCEDURE_NAME procedureName,
+  MR.PROCEDURE_ID procedureId,
+  TO_CHAR(MR.NEXT_DATE_MODIFY,'dd/MM/yyyy') nextDateModify,
+  dev.LEVEL_IMPORTANT levelImportant,
+  mr.IP_SERVER ip,
+  dev.MR_CONFIRM_SOFT mrConfirm,
+  dev.mrConfirmName mrConfirmName,
+  dev.boUnitName boUnitName,
+  CR.CR_NUMBER crNumber,
+  mrMngt.MR_CODE mrCode,
+  mr.LOG_MOP logMop,
+  (
+  SELECT RTRIM(XMLAGG(XMLELEMENT(E,WLG_TEXT,',').EXTRACT('//text()')
+  ORDER BY WLG_TEXT).GetClobVal(),',') AS WLG_TEXT
+  FROM OPEN_PM.WORK_LOG WL
+  WHERE WLG_OBJECT_TYPE = 2 and  WL.WLG_OBJECT_ID = MR.CR_ID
+  GROUP BY WLG_OBJECT_ID
+  ) wlgText
+FROM OPEN_PM.MR_SCHEDULE_IT mr
+LEFT JOIN COMMON_GNOC.CAT_LOCATION cl
+ON TO_CHAR(CL.LOCATION_ID) = mr.MARKET_CODE
+LEFT JOIN OPEN_PM.MR_CFG_CR_IMPL_UNIT unit
+ON mr.MARKET_CODE  = unit.MARKET_CODE
+AND mr.DEVICE_TYPE = UNIT.DEVICE_TYPE_ID
+AND mr.REGION      = unit.REGION
+LEFT JOIN COMMON_GNOC.UNIT u1
+ON unit.IMPLEMENT_UNIT = u1.UNIT_ID
+LEFT JOIN COMMON_GNOC.UNIT u2
+ON unit.CHECKING_UNIT = u2.UNIT_ID
+LEFT JOIN OPEN_PM.MR_CFG_PROCEDURE_IT_SOFT sof
+ON MR.PROCEDURE_ID = SOF.PROCEDURE_ID
+LEFT JOIN
+  (SELECT t1.MARKET_CODE,
+    t1.DEVICE_TYPE,
+    t1.OBJECT_ID,
+    t1.NODE_AFFECTED,
+    t1.UD,
+    t1.DB,
+    t1.BO_UNIT,
+    t1.APPROVE_STATUS,
+    t1.LEVEL_IMPORTANT,
+    t1.MR_CONFIRM_SOFT ,
+    mc.CONFIG_NAME mrConfirmName,
+    bo.UNIT_NAME boUnitName
+  FROM OPEN_PM.MR_SYN_IT_DEVICES t1
+  LEFT JOIN OPEN_PM.MR_CONFIG mc
+  ON t1.MR_CONFIRM_SOFT = mc.CONFIG_CODE
+  AND mc.CONFIG_GROUP   ='LY_DO_KO_BD'
+  LEFT JOIN COMMON_GNOC.UNIT bo
+  ON t1.BO_UNIT           = bo.UNIT_ID
+  ) dev ON MR.MARKET_CODE = dev.MARKET_CODE
+AND MR.DEVICE_TYPE        = dev.DEVICE_TYPE
+AND MR.DEVICE_ID          = dev.OBJECT_ID
+----LEFT JOIN
+----  (
+----  ) wl
+--ON MR.CR_ID = WL.WLG_OBJECT_ID
+LEFT JOIN lst_lang ll
+ON ll.ITEM_CODE = mr.ARRAY_CODE
+LEFT JOIN OPEN_PM.CR CR
+ON CR.CR_ID = mr.CR_ID
+LEFT JOIN OPEN_PM.MR mrMngt
+ON mrMngt.MR_ID = mr.MR_ID
+WHERE 1         =1

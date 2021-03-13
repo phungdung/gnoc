@@ -1,0 +1,222 @@
+server:
+  port: 8104
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8061/eureka/
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 40MB
+      max-request-size: 40MB
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: 6e72e4ffd4a7e4f5e9462d08111766b5022d42517c868ded6fcb73ddd82f2b8242f2fabd241a7e81e59e20cf4e83e5c3
+    username: 750a38eecd555b94d66303b2bc5a37b6
+    password: eb2c91124dbdfd337e8a39d3b2c90ec7
+    hikari:
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      maximum-pool-size: 40
+      minimum-idle: 5
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.Oracle10gDialect
+        show_sql: true
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 30000
+        readTimeout: 30000
+        loggerLevel: full
+logging:
+  file: ./log/wo-service.log
+  file.max-history: 10
+  file.max-size: 10MB
+  level:
+    ROOT: info
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan}%clr(:%-5L){magenta} %16X{traceId}:%16X{spanId} %clr(:){faint} %m%n%wEx"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } --- [%t] %-40.40logger{39}:%-5L %16X{traceId}:%16X{spanId} : %m%n%wEx"
+opentracing:
+  jaeger:
+    udp-sender:
+      host: localhost
+      port: 6831
+    log-spans: false
+    probabilistic-sampler:
+      sampling-rate: 0.01
+
+application:
+  ftp:
+    server: 10.240.232.25
+    port: 21
+    user: 429585a63e5e23f3a5f7c64a0ddd5f29
+    pass: d7d9574824a43ad32007b26cd1957efd
+    folder: gnoc2/wo-upload
+  upload:
+    folder: /data2/WFM
+  temp:
+    folder: ./wo-temp
+  smsGatewayId: 5
+  senderId: 400
+  extensionAllow: .doc,.docx,.pdf,.xls,.xlsx,.ppt,.pptx,.csv,.txt,.rar,.zip,.7z,.jpg,.gif,.png,.bmp,.sql
+  record_ft_emergency: record_ft_emergency
+  record_cd_emergency: record_cd_emergency
+  urlForIpcc: http://10.58.71.149:9969/WFMServer/WoServices?wsdl;8c28886764d054994687ccba21e07165;8c28886764d054991755ef423296a346
+  record_ft: record_ft
+  record_cd: record_cd
+  conf:
+    user_name_nims_2: 79f81599dee3a5cd573b081525541740
+    password_nims_2: 79f81599dee3a5cd573b081525541740
+  nims:
+    ht:
+      global:
+        url: http://10.60.108.82:9007/NIMS_Webservice_HT_Taptrung/InfraWS?wsdl
+  vsmart_download_url: http://10.58.71.216:8338/download/
+  ws:
+    qos:
+      url: http://192.168.176.210:8897/QoSWebservice/QoSService?wsdl
+      targetNamespace: http://service.qos.viettel.com/
+      name: QoSService
+    cc:
+      stl:
+        url: http://10.120.8.117:8822/BCCSGateway?wsdl
+    spm:
+      analys:
+        url: http://10.58.71.159:8086/SPMService/AnalysProcessService?wsdl
+    co:
+      dien:
+        url: http://10.60.108.82:9599/EEE2WS/EEE2WS?wsdl
+    chi:
+      phi:
+        url: http://10.240.202.33:9292/CPWS/CPWS?wsdl
+    nocpro_service_url: http://10.58.65.180:9001/Nocpro_Webservice/NocproWebservice?wsdl
+    userIpcc: gtPQBgcw6cy/PgpgJa8uR90HzziSQrvBFQKIFHdlN7Iz8ljFL5xt/Nx3oOqg8ep5RWmXE9aQwNeB1Er/mlo6/A==
+    passIpcc: gtPQBgcw6cy/PgpgJa8uR90HzziSQrvBFQKIFHdlN7Iz8ljFL5xt/Nx3oOqg8ep5RWmXE9aQwNeB1Er/mlo6/A==
+    userPayment: D6wEWsUcB0JWkkj8xphAT7h7RGd9m0W2466trzR1mFBytqNI4t4Z6yV3Xg4nl2Rp
+    passPayment: D6wEWsUcB0JWkkj8xphAT7h7RGd9m0W2466trzR1mFBytqNI4t4Z6yV3Xg4nl2Rp
+    user_chat: W4+dLNl31Xf3QEgqz8bSOuvEYZfLFq3/HKPrOxHBNFg=
+    pass_chat: NqOZHmGLREcMD+SnTeIugz4+7rTFwxRKNmKaSxYeddE=
+    nocprov4_url: http://10.58.65.180:9001/Nocpro_Webservice/NocproWebservice?wsdl
+    service_url_nims: http://10.58.71.141:9005/NIMS_Webservice_HT_Trunk_Final/InfraWS?wsdl
+    iim_url: http://10.58.15.114:8888/IIMSERVICES/IimServices?wsdl
+    service_url_chat: http://10.60.101.191:8087/SmartService/smartOfficeService?wsdl
+    hoan:
+      cong:
+        url: http://10.240.202.33:8997/restful/service/osTaskDetail/updateStatusWOByWoId
+        user: 81dce290247aaddd43234192882e2805
+        pass: 81dce290247aaddd43234192882e2805
+    userNimsHT: ZFB937AAgrfOvY2uNHHUwtaRG4SRU2mDP1iPHWJNVMxn9yhmym54ZOlM0pgTaGqQcpnrmRsDf1zIUCDhY/okpQ==
+    passNimsHT: ZFB937AAgrfOvY2uNHHUwtaRG4SRU2mDP1iPHWJNVMxn9yhmym54ZOlM0pgTaGqQcpnrmRsDf1zIUCDhY/okpQ==
+    user_qlctkt_cd: h4HTLkpeluqSwvE4+UPUWcvfTiP6XsO7vft0dNf5YU1n9yhmym54ZOlM0pgTaGqQcpnrmRsDf1zIUCDhY/okpQ==
+    pass_qlctkt_cd: JNpH4/yxNeJ1o5H0ZxH3WMrUAgz5bTyrlMJR0zOYchpZXBlMKR8UVdfj6wmNchrkrZbhGSD0YbU4yM+4lzw4RQ==
+    user:
+      co:
+        dien: 490be9a41d28e9e6
+      Cc:
+        STL: cbd9dc6e7df1e365
+      QLCTKT:
+        BCCS: 6dcdc7f000c3e56b
+      chi:
+        phi: 1RvAVKzHpErg3PYOpTQgug
+    pass:
+      co:
+        dien: 717cc7ab8534c18e5f63724936bc76a5
+      Cc:
+        STL: b8738b6e634c48350eef71859b1ebf31
+      QLCTKT:
+        BCCS: d6847257b35cbcd85f63724936bc76a5
+      chi:
+        phi: gtPQBgcw6cy/PgpgJa8uR90HzziSQrvBFQKIFHdlN7Iz8ljFL5xt/Nx3oOqg8ep5RWmXE9aQwNeB1Er/mlo6/A==
+    userNocPro: EaVmcJxzNbAni5GD3WJzEqaxxosjrSdujgTKCokhkfMz8ljFL5xt/Nx3oOqg8ep5RWmXE9aQwNeB1Er/mlo6/A==EaVmcJxzNbAni5GD3WJzEqaxxosjrSdujgTKCokhkfMz8ljFL5xt/Nx3oOqg8ep5RWmXE9aQwNeB1Er/mlo6/A==
+    passNocPro: ll9zh6uGwgNXwFZTDIivWVGdOtSfh4fmu/CVFoqHo6STW/cl8TBplfURNnq893Waih9ujBzDKN08bCDFBw/ynQ==
+    qlctkt:
+      bccs:
+        vtt:
+          url: http://10.60.108.84:9015/BCCS_SHOP_WS/BccsService?wsdl
+        url: http://10.60.108.84:9015/QLCTKT_Service/QLTWS?wsdl
+#        url: http://10.60.108.84:9616/QLCTKT_Service/QLTWS?wsdl
+      url: http://10.60.108.84:9015/QLCTKT_Service/QLTWS?wsdl
+
+    mr_ws_url: http://10.240.202.33:8333/MRGNOCServer/
+
+    mr_ws_targeNameSpace: http://service.maintenance.gnoc.viettel.com/
+    tt_ws_url: http://10.240.202.7:8342/ProblemGNOC/
+    tt_ws_targeNameSpace: http://service.incident.gnoc.viettel.com/
+    cms_ws_url: http://10.60.108.82:8086/CRGNOCServer/
+    cms_ws_targeNameSpace: http://service.cr.gnoc.viettel.com/
+    gnoc_ws_url: http://10.58.71.216:8086/CommonGNOC/
+    gnoc_ws_targeNameSpace: http://service.common.gnoc.viettel.com/
+    timeOut: 60000
+    service_url_ipcc: http://10.55.53.158:9099/IpccService/CallService?wsdl
+    userKtts2: gibYEygwxDaP8D3G2NgTv7mz4keivIIbusIYwqHYS/Iz8ljFL5xt/Nx3oOqg8ep5RWmXE9aQwNeB1Er/mlo6/A==
+    passKtts2: bJNPbIfFmxjvJVRzph5lTEBFJbqqwcPEo4K+GnLt+zEz8ljFL5xt/Nx3oOqg8ep5RWmXE9aQwNeB1Er/mlo6/A==
+    WSPOOL:
+      maxTotal: 20
+    recvTimeoutNTMS: 120000
+    connectTimeoutNTMS: 60000
+    service_url_cc: http://10.58.71.149:8478/CCWebservice/CcServiceForNTMS?wsdl
+    bccs2_service_url: http://10.58.71.22:9700/CCService/bpm/SpmService?wsdl
+    bccs2_service_username: UMR4KL27mQwEl6N+cAZrHx040wPtrvWh8rEdnOWD5UdytqNI4t4Z6yV3Xg4nl2Rp
+    bccs2_service_pass: UMR4KL27mQwEl6N+cAZrHx040wPtrvWh8rEdnOWD5UdytqNI4t4Z6yV3Xg4nl2Rp
+    service_url_spm: http://10.58.71.159:8086/SPMService/ServiceProblemService?wsdl
+    service_url_payment: http://10.58.71.47:9696/PaymentServices/PaymentServices?wsdl
+    service_url_ktts2: http://10.58.71.138:8153/KTTS2_SERVICE/VSmartService?wsdl
+    bccs:
+      im:
+        inventory:
+          url: http://10.58.71.49:8200/InventoryService/bpm/inventory/InventoryService?wsdl
+          targetNamespace: http://service.inventory.bccs.viettel.com/
+          name: InventoryServiceImplService
+          username: zw8VUEjAReu2t5D6Bg9XottHdraTPFafIXPFAQdQruZUy7yrx/YJP/rZ8+bKVAsseLv136AvBitamxYcygq2cg==
+          password: zw8VUEjAReu2t5D6Bg9XottHdraTPFafIXPFAQdQruZUy7yrx/YJP/rZ8+bKVAsseLv136AvBitamxYcygq2cg==
+    nims:
+      bccs:
+        url: http://10.60.108.82:9007/NIMS_Webservice_BCCS2_Taptrung/BccsWS?wsdl
+      cd:
+        bccs2:
+          url: http://10.60.108.82:9009/NIMS_Infra_Service_BCCS2_V2/BccsWS?wsdl
+        global:
+          url: http://10.60.108.82:9007/NIMS_Webservice_BCCS2_Taptrung/BccsWS?wsdl
+      ht:
+        #url: http://10.60.108.82:9008/NIMS_Infra_Service/InfraWS?wsdl
+        url: http://10.60.5.245:9008/NIMS_Infra_Service/InfraWS?wsdl
+        global:
+          url: http://10.60.108.82:9007/NIMS_Webservice_HT_Taptrung/InfraWS?wsdl
+    vipa_userService: vVvODSn60V0pwQqD08gBNidzcGsue4T6dDecSQtpLsE=
+    #vipa_passService=Vipa@123
+    vipa_passService: 1kL1SnviytvJn+wQLvwbO3sEFsketAiTpJrEtPTOnIQ=
+    vipa_saltService: vipa
+    service_url_vipadd: http://10.240.202.12:8668/MSChangeProcess/WSForGNOC?wsdl
+    #-------------------------------- AMI ONE -----------------------------
+    amiOne:
+      url: http://10.60.156.35:9091
+      amiUser: e360a065b1bb3a8a2280e7e6d698b0a3
+      amiPass: 224f2e0b8e248d03ba9f694f9eaca576
+    #----------------------------WS iMES -----------------------------------
+    imes:
+      url: http://10.240.202.63:8090/ConcentrateWS/QltnConcentrateWS?wsdl
+      user: 0a2d47b4dc67d3fb5dc3675f8b13fdbd
+      pass: eaf7381549050b0aa9fee584be649918
+    bccs_cc2_myt:
+      url: http://10.201.0.251:8681/CCService/bpm/SpmService?wsdl
+    bccs_cc3_mvt:
+      url: http://10.60.105.38:8301
+    bccs_cc3_vtp:
+      url: http://10.60.105.38:8101
+    bccs_im3_mvt:
+      url: http://10.60.105.38:8301
+    bccs_im3_vtp:
+      url: http://10.60.105.38:8101
+    bccs_im2_myt_url: http://10.201.0.192:8026/InventoryServiceLocal/bpm/inventory/InventoryService?wsdl
+    userNimsHTGlobal: ZFB937AAgrfOvY2uNHHUwtaRG4SRU2mDP1iPHWJNVMxn9yhmym54ZOlM0pgTaGqQcpnrmRsDf1zIUCDhY/okpQ==
+    passNimsHTGlobal: ZFB937AAgrfOvY2uNHHUwtaRG4SRU2mDP1iPHWJNVMxn9yhmym54ZOlM0pgTaGqQcpnrmRsDf1zIUCDhY/okpQ==
+    gnoc1_wo: http://10.240.202.33:8338/WFMServerT3/WoServices?wsdl

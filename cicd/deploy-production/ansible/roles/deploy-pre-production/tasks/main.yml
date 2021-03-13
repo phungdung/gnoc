@@ -1,0 +1,72 @@
+---
+- name: Check if docker-compose file is exists
+  stat:
+    path: "{{pre_production_working_dir}}/docker-compose-vsmart-pre-production.yml"
+  register: docker_compose_vsmart_details
+
+- name: Get vsmart service running list
+  shell:
+    cmd: "docker-compose -p vsmart -f docker-compose-vsmart-pre-production.yml ps"
+    chdir: "{{pre_production_working_dir}}"
+  register: vsmart_running_list
+  when:
+    - docker_compose_vsmart_details.stat.exists == True
+  ignore_errors: yes
+
+- debug:
+    msg: "{{vsmart_running_list}}"
+  when:
+    - docker_compose_vsmart_details.stat.exists == True
+
+- set_fact:
+    vsmart_service_exists: False
+
+- set_fact:
+    vsmart_service_exists: True
+  when:
+    - docker_compose_vsmart_details.stat.exists == True
+    - ' "configuration-service" in vsmart_running_list.stdout '
+
+- name: Stop existing old vsmart services stack if exists
+  shell:
+    cmd: "docker-compose -p vsmart -f docker-compose-vsmart-pre-production.yml down --rmi all"
+    chdir: "{{pre_production_working_dir}}"
+  when: vsmart_service_exists == True
+  ignore_errors: yes
+  register: vsmart_down_output
+
+- debug:
+    msg: "{{vsmart_down_output}}"
+  when: vsmart_service_exists == True
+
+- name: Delete old service docker compose file
+  file:
+    state: absent
+    path: "{{pre_production_working_dir}}/docker-compose-vsmart-pre-production.yml"
+  when: docker_compose_vsmart_details.stat.exists == True
+
+- name: Create docker compose file for vsmart services
+  template:
+    src: docker-compose-vsmart-pre-production.yml.j2
+    dest: "{{pre_production_working_dir}}/docker-compose-vsmart-pre-production.yml"
+
+- name: Start vsmart stack
+  shell:
+    cmd: "docker-compose -p vsmart -f docker-compose-vsmart-pre-production.yml up -d"
+    chdir: "{{pre_production_working_dir}}"
+  register: vsmart_up_output
+
+- debug:
+    msg: "{{vsmart_up_output}}"
+
+- name: Verify microservices is up
+  wait_for:
+    host: "127.0.0.1"
+    port: "{{SERVICE_PORT_LIST[item]}}"
+    delay: 3
+    timeout: 600
+  with_items: "{{service_list}}"
+
+- name: wait for service list refresh
+  shell:
+    cmd: "sleep {{refresh_service_list_timeout}}"

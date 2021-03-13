@@ -1,0 +1,21 @@
+---
+#- name: Create docker compose file for service
+#  template:
+#    src: service-docker-compose.j2
+#    dest: "{{working_dir}}/{{service_name}}.yml"
+
+- name: Start service containers
+  shell:
+    cmd: "docker-compose --verbose --log-level DEBUG -p gnoc -f docker-compose-services-stack.yml up -d --timeout 200"
+    chdir: "./"
+
+- name: wait for service port up
+  wait_for:
+    host: "127.0.0.1"
+    port: "8082"
+    timeout: 360
+
+#- name: wait for service list refresh
+#  shell:
+#    cmd: "sleep {{refresh_service_list_timeout}}"
+#  when: service_name != "configuration-service" and service_name != "discovery-service" and service_name != "gateway-service"

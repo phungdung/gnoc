@@ -1,0 +1,7 @@
+SELECT
+t1.TRS_ID trsId,
+t1.TRS_NAME trsName,
+t1.HOST_TEMPLATE_ID hostTemplateId,
+t1.CLIENT_TEMPLATE_ID clientTemplateId,
+t1.RELATION_TYPE relationType
+FROM OPEN_PM.TEMPLATE_RELATIONS t1

@@ -1,0 +1,8 @@
+SELECT
+t1.TIDA_ID tidaId,
+t1.TEMP_IMPORT_ID tempImportId,
+t1.TEMP_IMPORT_COL_ID tempImportColId,
+t1.TEMP_IMPORT_VALUE tempImportValue,
+t1.CR_ID crId,
+t1.ROW_ORDER rowOrder
+FROM OPEN_PM.TEMP_IMPORT_DATA t1
